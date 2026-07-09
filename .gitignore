@@ -20,3 +20,6 @@ yarn-error.log*
 .idea/
 .vscode/
 *.log
+
+# Playwright MCP artifacts
+/.playwright-mcp/

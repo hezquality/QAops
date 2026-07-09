@@ -2,9 +2,7 @@ import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from './BasePage';
 
 /**
- * EXEMPLE DE RÉFÉRENCE — Page Object.
- * Sert de modèle de style pour les Page Objects générés par @claude.
- * Les sélecteurs ci-dessous sont indicatifs : à ajuster sur le vrai DOM de rental-app (Phase 1).
+ * Page Object — Connexion (/login). Sélecteurs validés sur le DOM réel de LocImmo.
  */
 export class LoginPage extends BasePage {
   readonly path = '/login';
@@ -12,15 +10,17 @@ export class LoginPage extends BasePage {
   private readonly emailInput: Locator;
   private readonly passwordInput: Locator;
   private readonly submitButton: Locator;
+  // ⚠️ L'erreur de login est un <div> texte au-dessus du formulaire, PAS un role=alert
+  // (le role=alert de la page est un conteneur toast séparé, vide).
+  // Suggestion côté app : ajouter data-testid="form-error" pour un sélecteur stable.
   private readonly errorMessage: Locator;
 
   constructor(page: Page) {
     super(page);
-    // Locators robustes : getByRole / getByLabel en priorité.
-    this.emailInput = page.getByLabel(/email/i);
-    this.passwordInput = page.getByLabel(/mot de passe|password/i);
-    this.submitButton = page.getByRole('button', { name: /se connecter|log in|sign in/i });
-    this.errorMessage = page.getByRole('alert');
+    this.emailInput = page.getByRole('textbox', { name: 'Email' });
+    this.passwordInput = page.getByRole('textbox', { name: 'Mot de passe', exact: true });
+    this.submitButton = page.getByRole('button', { name: 'Se connecter' });
+    this.errorMessage = page.getByText('Email ou mot de passe incorrect');
   }
 
   /** Action métier : connexion complète. */
@@ -32,5 +32,6 @@ export class LoginPage extends BasePage {
 
   async expectLoginError(): Promise<void> {
     await expect(this.errorMessage).toBeVisible();
+    await expect(this.page).toHaveURL(/\/login/);
   }
 }

@@ -50,6 +50,18 @@ Tags utiles : `@smoke`, `@regression`, `@JIRA-xxx`.
 - Un test = un scénario isolé et rejouable (pas de dépendance d'ordre entre tests).
 - Secrets via `process.env` (voir `.env.example`) — jamais en dur.
 
+## LocImmo — repères UI validés (pour générer des tests justes)
+
+- **Base URL** : `RENTAL_APP_BASE_URL` (Render). ⚠️ Free tier : **DB SQLite vide au démarrage et éphémère** (reset au redeploy/spin-down après 15 min). → Les tests **créent leurs propres données** (inscription via `/register`) ; pas de compte préexistant. Prévoir un **warm-up** (1er GET) + timeouts généreux contre le cold start.
+- **Routes** : `/` (accueil + recherche), `/register`, `/login`, `/create` (protégée), `/listing/[id]`, `/my-listings` (protégée).
+- **Sélecteurs réels** (validés) :
+  - Login : `getByRole('textbox', { name: 'Email' })`, `getByRole('textbox', { name: 'Mot de passe', exact: true })`, `getByRole('button', { name: 'Se connecter' })`.
+  - Register : `Nom complet`, `Email`, `Téléphone (optionnel)`, `Mot de passe` (**exact:true**), `Confirmer le mot de passe`, bouton `S'inscrire`.
+  - Navbar connecté : texte `Bonjour, <nom>` + bouton `Déconnexion` + liens `Déposer une annonce`/`Mes annonces`.
+- **Erreur de login** : `getByText('Email ou mot de passe incorrect')` — ⚠️ c'est un **`<div>` texte**, PAS un `role=alert` (l'alert de la page est un conteneur vide). Proposer `data-testid="form-error"` côté app.
+- **⚠️ Finding connu (candidat bug LIM-10/11)** : après inscription/connexion, l'app redirige vers `/` mais **la navbar ne reflète l'état connecté qu'après un rechargement** (`useAuth` ne refetch pas `/api/auth/me` sur navigation client) ; la session cookie est pourtant valide. Pour valider une session dans un test, **recharger la home** (`page.goto('/')`) avant d'asserter l'état connecté.
+- **Page Objects déjà fournis** : `pages/BasePage.ts`, `LoginPage`, `RegisterPage`, `components/NavbarComponent`, fixtures dans `fixtures/pages.fixture.ts`, données/factory dans `data/users.ts`. **Réutilise-les** ; crée de nouveaux Page Objects pour les écrans non couverts.
+
 ## Commandes
 
 - `npm test` — tous les tests | `npm run test:smoke` — smoke uniquement

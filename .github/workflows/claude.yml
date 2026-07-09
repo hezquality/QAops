@@ -44,7 +44,10 @@ jobs:
       - name: Run Claude Code
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          # MCP (Playwright + Atlassian) et prompts additionnels se configurent ici en Phase 3.
-          # claude_args: >-
-          #   --mcp-config .github/claude-mcp.json
+          # Auth via token OAuth abonnement Claude Pro/Max (pas de clé API facturée à l'usage).
+          # Généré en local avec: claude setup-token
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # MCP Playwright : permet à @claude d'explorer LocImmo (DOM réel) pour des sélecteurs justes.
+          # MCP Atlassian/Jira : à ajouter dans claude-mcp.json quand JIRA_BASE_URL/EMAIL seront connus.
+          claude_args: >-
+            --mcp-config .github/claude-mcp.json
