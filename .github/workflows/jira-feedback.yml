@@ -26,6 +26,7 @@ jobs:
       PR_TITLE: ${{ github.event.pull_request.title }}
       HEAD_REF: ${{ github.event.pull_request.head.ref }}
       INPUT_KEY: ${{ github.event.inputs.jira_key }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Retour vers Jira (commentaire + transition)
         run: |
@@ -36,7 +37,16 @@ jobs:
           fi
           if [ -z "$KEY" ]; then echo "Aucune clé Jira LIM-x trouvée — rien à faire."; exit 0; fi
           echo "Ticket Jira : $KEY"
-          LINK="${PR_URL:-'(déclenchement manuel)'}"
+
+          # URL de la PR : celle de l'événement, sinon on retrouve la PR mergée du ticket.
+          LINK="$PR_URL"
+          if [ -z "$LINK" ]; then
+            LINK=$(curl -s -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/search/issues?q=repo:$GITHUB_REPOSITORY+is:pr+is:merged+in:title+$KEY" \
+              | python3 -c "import sys,json; it=json.load(sys.stdin).get('items',[]); print(it[0]['html_url'] if it else '')")
+          fi
+          [ -z "$LINK" ] && LINK="(PR introuvable)"
+          echo "PR : $LINK"
 
           # 1) Commentaire sur le ticket
           curl -s -X POST -u "$JIRA_EMAIL:$JIRA_API_TOKEN" -H "Content-Type: application/json" \
