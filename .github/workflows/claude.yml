@@ -3,13 +3,13 @@ name: Claude Code
 # Déclenche @claude sur les mentions dans issues / PR / commentaires.
 on:
   issue_comment:
-    types: [created]
+    types: [created, edited]
   pull_request_review_comment:
-    types: [created]
+    types: [created, edited]
   issues:
     types: [opened, assigned]
   pull_request_review:
-    types: [submitted]
+    types: [submitted, edited]
 
 jobs:
   claude:
