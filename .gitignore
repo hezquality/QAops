@@ -23,3 +23,6 @@ yarn-error.log*
 
 # Playwright MCP artifacts
 /.playwright-mcp/
+
+# Runbook interne (méthodo, non publié)
+RUNBOOK.md
