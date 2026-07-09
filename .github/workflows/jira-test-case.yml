@@ -12,6 +12,10 @@ jobs:
     env:
       # URL publique de LocImmo (pas un secret) pour que `npm test` cible l'app live.
       RENTAL_APP_BASE_URL: https://locimmo.onrender.com
+      # Accès Jira (secrets) : @claude lit le scénario du ticket via l'API REST.
+      JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+      JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+      JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
     permissions:
       contents: write
       pull-requests: write
@@ -43,10 +47,13 @@ jobs:
             Tu génères un test Playwright à partir d'un scénario de test provenant de Jira.
 
             Ticket Jira : ${{ github.event.client_payload.jira_key }}
-            Titre       : ${{ github.event.client_payload.summary }}
 
-            Scénario (source Jira) :
-            ${{ github.event.client_payload.description }}
+            1) Récupère le scénario depuis Jira (titre + description Gherkin) en exécutant :
+               curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" -H "Accept: application/json" \
+                 "$JIRA_BASE_URL/rest/api/2/issue/${{ github.event.client_payload.jira_key }}?fields=summary,description"
+               Le champ `description` contient le scénario (Given/When/Then) à automatiser.
+
+            2) Génère le test Playwright correspondant.
 
             Consignes (respecte STRICTEMENT CLAUDE.md) :
             - Réutilise les Page Objects existants (LoginPage, RegisterPage, NavbarComponent) et les fixtures ; AUCUN sélecteur brut dans le fichier de test.
