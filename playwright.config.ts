@@ -16,11 +16,12 @@ export default defineConfig({
 
   use: {
     baseURL: process.env.RENTAL_APP_BASE_URL,
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
+    // Preuve d'exécution : trace + screenshot systématiques (visualisables dans le rapport HTML).
+    trace: 'on',
+    screenshot: 'on',
     video: 'retain-on-failure',
-    actionTimeout: 10_000,
-    navigationTimeout: 30_000,
+    actionTimeout: 15_000,
+    navigationTimeout: 60_000,
   },
 
   projects: [

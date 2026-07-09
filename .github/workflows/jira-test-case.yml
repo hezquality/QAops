@@ -66,3 +66,15 @@ jobs:
             - Si un sélecteur manque, explore le DOM réel via le MCP Playwright.
             - Lance `npm test` (au moins le projet chromium) et corrige jusqu'au vert.
             - Crée une branche dédiée, commit, puis ouvre une PR décrivant le scénario et liée à ${{ github.event.client_payload.jira_key }}. NE MERGE JAMAIS — revue humaine obligatoire.
+
+      # Preuve d'exécution : rapport HTML + captures + traces téléchargeables depuis le run.
+      - name: Upload rapport Playwright
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.event.client_payload.jira_key }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+          if-no-files-found: ignore
