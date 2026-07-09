@@ -1,0 +1,22 @@
+{
+  "name": "qaops",
+  "version": "0.1.0",
+  "description": "QAops — tests Playwright end-to-end pour rental-app, générés via Claude Code GitHub Actions à partir de scénarios Jira/Xray.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:smoke": "playwright test --grep @smoke",
+    "report": "playwright show-report",
+    "codegen": "playwright codegen",
+    "install:browsers": "playwright install --with-deps"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "@types/node": "^22.10.0",
+    "dotenv": "^16.4.7",
+    "typescript": "^5.7.0"
+  }
+}

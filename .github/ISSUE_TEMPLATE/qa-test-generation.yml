@@ -1,0 +1,35 @@
+name: "🧪 Génération de test (Jira/Xray → Playwright)"
+description: "Demande à @claude de générer un test Playwright à partir d'un scénario Jira/Xray."
+title: "[Test] <résumé du scénario> — @claude"
+labels: ["qa-test", "claude"]
+body:
+  - type: input
+    id: jira
+    attributes:
+      label: "Ticket Jira / Test Xray"
+      description: "Clé du ticket (ex: RENT-123) et/ou ID du test Xray."
+      placeholder: "RENT-123 / XRAY-456"
+    validations:
+      required: true
+  - type: textarea
+    id: scenario
+    attributes:
+      label: "Scénario de test"
+      description: "Steps Gherkin/Xray (Given/When/Then) ou description. @claude peut aussi le lire via MCP Atlassian."
+      placeholder: |
+        Given un utilisateur connecté
+        When il réserve un logement disponible
+        Then la réservation apparaît dans « Mes réservations »
+    validations:
+      required: true
+  - type: input
+    id: scope
+    attributes:
+      label: "Périmètre / tags"
+      placeholder: "@smoke, chromium uniquement, etc."
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        **@claude** : génère le test en respectant `CLAUDE.md` (POM, fixtures, locators robustes, tag `@JIRA-xxx`),
+        lance `npm test`, puis ouvre une PR liée à ce ticket. Ne merge pas — revue humaine requise.

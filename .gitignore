@@ -1,0 +1,22 @@
+# Secrets — NE JAMAIS COMMITER
+.env
+.env.local
+*.token
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/.auth/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.log
