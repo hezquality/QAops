@@ -1,0 +1,101 @@
+name: Rapport Playwright (PR)
+
+# À chaque ouverture/mise à jour d'une PR : lance les tests, publie le rapport HTML sur
+# GitHub Pages, et commente la PR avec le lien + un aperçu visuel (preuve que le script tourne).
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: pw-report-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-report:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      RENTAL_APP_BASE_URL: https://locimmo.onrender.com
+    steps:
+      - name: Checkout (branche de la PR)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install deps + Playwright browsers
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Warm-up (réveille le service Render, évite le cold start)
+        run: |
+          for i in $(seq 1 40); do
+            body=$(curl -s --max-time 15 "$RENTAL_APP_BASE_URL/api/listings" || true)
+            case "$body" in
+              \[*|\{*) echo "App prête (réponse JSON)"; exit 0 ;;
+            esac
+            echo "Attente réveil app... tentative $i"; sleep 5
+          done
+          echo "Warm-up: timeout — on lance quand même (retries Playwright)."
+
+      - name: Tests Playwright (chromium)
+        id: pw
+        run: npx playwright test --project=chromium
+        continue-on-error: true
+
+      - name: Prépare l'aperçu visuel
+        if: always()
+        run: |
+          shot=$(find test-results -name '*.png' 2>/dev/null | head -1 || true)
+          mkdir -p playwright-report
+          if [ -n "$shot" ]; then cp "$shot" playwright-report/evidence.png; echo "aperçu: $shot"; fi
+
+      - name: Prépare l'artefact Pages
+        if: always()
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: playwright-report
+
+      - name: Déploie le rapport sur GitHub Pages
+        id: deploy
+        if: always()
+        uses: actions/deploy-pages@v4
+
+      - name: Commente la PR (lien rapport + aperçu)
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = '${{ steps.deploy.outputs.page_url }}';
+            const ok = '${{ steps.pw.outcome }}' === 'success';
+            const body = [
+              `## 🎭 Rapport Playwright — ${ok ? '✅ script opérationnel (tests au vert)' : '❌ échec(s) — voir le rapport'}`,
+              ``,
+              `📊 **Rapport interactif** (chaque étape + captures + traces) : ${url}`,
+              ``,
+              `**Aperçu du dernier écran piloté par le test :**`,
+              ``,
+              `![aperçu Playwright](${url}evidence.png)`,
+              ``,
+              `> _Publié sur GitHub Pages à chaque mise à jour de la PR. L'image peut mettre ~1 min à apparaître le temps du déploiement Pages._`,
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
