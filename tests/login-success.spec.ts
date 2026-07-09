@@ -1,4 +1,4 @@
-import { test, expect } from '@fixtures/pages.fixture';
+import { test } from '@fixtures/pages.fixture';
 import { makeUser } from '@data/users';
 
 /**
@@ -21,20 +21,19 @@ test.describe('Authentification LocImmo', () => {
 
     await registerPage.goto();
     await registerPage.register(user);
-    // Quitte le formulaire d'inscription = l'inscription a été acceptée par l'API
-    // (en cas d'erreur, l'app reste sur /register). Plus pertinent qu'un simple
-    // toHaveURL('/') qui ne fait que présumer la destination exacte de la redirection.
-    await expect(page).not.toHaveURL(/\/register/);
+    // Attend la fin de la redirection SPA avant de recharger (évite une race où
+    // le reload interrompt la requête d'inscription en cours). Pure synchronisation :
+    // l'assertion métier qui suit (navbar.expectLoggedIn) est ce qui valide le scénario.
+    await page.waitForURL('/');
 
     // Finding LIM-10/11 : la navbar ne reflète l'état connecté qu'après un rechargement.
     await page.reload();
+    await navbar.expectLoggedIn(user.name);
     await navbar.logout();
 
     await loginPage.goto();
     await loginPage.login(user.email, user.password);
-    // Quitte le formulaire de connexion = la connexion a réussi (cf. LoginPage.expectLoginError
-    // qui vérifie symétriquement le maintien sur /login en cas d'échec).
-    await expect(page).not.toHaveURL(/\/login/);
+    await page.waitForURL('/');
 
     await page.reload();
     await navbar.expectLoggedIn(user.name);
