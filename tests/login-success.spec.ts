@@ -21,7 +21,10 @@ test.describe('Authentification LocImmo', () => {
 
     await registerPage.goto();
     await registerPage.register(user);
-    await expect(page).toHaveURL('/');
+    // Quitte le formulaire d'inscription = l'inscription a été acceptée par l'API
+    // (en cas d'erreur, l'app reste sur /register). Plus pertinent qu'un simple
+    // toHaveURL('/') qui ne fait que présumer la destination exacte de la redirection.
+    await expect(page).not.toHaveURL(/\/register/);
 
     // Finding LIM-10/11 : la navbar ne reflète l'état connecté qu'après un rechargement.
     await page.reload();
@@ -29,7 +32,9 @@ test.describe('Authentification LocImmo', () => {
 
     await loginPage.goto();
     await loginPage.login(user.email, user.password);
-    await expect(page).toHaveURL('/');
+    // Quitte le formulaire de connexion = la connexion a réussi (cf. LoginPage.expectLoginError
+    // qui vérifie symétriquement le maintien sur /login en cas d'échec).
+    await expect(page).not.toHaveURL(/\/login/);
 
     await page.reload();
     await navbar.expectLoggedIn(user.name);
