@@ -1,0 +1,57 @@
+name: Jira ← Retour après merge
+
+# Ferme la boucle : quand une PR de test est MERGÉE, on notifie le ticket Jira source
+# (commentaire + transition vers « Terminé »). workflow_dispatch permet de le tester à la main.
+on:
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      jira_key:
+        description: "Clé Jira à notifier (ex. LIM-1)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  notify-jira:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    env:
+      JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+      JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+      JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      PR_URL: ${{ github.event.pull_request.html_url }}
+      PR_TITLE: ${{ github.event.pull_request.title }}
+      HEAD_REF: ${{ github.event.pull_request.head.ref }}
+      INPUT_KEY: ${{ github.event.inputs.jira_key }}
+    steps:
+      - name: Retour vers Jira (commentaire + transition)
+        run: |
+          # Clé Jira : soit l'input manuel, soit extraite du titre/branche de la PR.
+          KEY="$INPUT_KEY"
+          if [ -z "$KEY" ]; then
+            KEY=$(echo "$PR_TITLE $HEAD_REF" | grep -oiE 'LIM-[0-9]+' | head -1 | tr '[:lower:]' '[:upper:]')
+          fi
+          if [ -z "$KEY" ]; then echo "Aucune clé Jira LIM-x trouvée — rien à faire."; exit 0; fi
+          echo "Ticket Jira : $KEY"
+          LINK="${PR_URL:-'(déclenchement manuel)'}"
+
+          # 1) Commentaire sur le ticket
+          curl -s -X POST -u "$JIRA_EMAIL:$JIRA_API_TOKEN" -H "Content-Type: application/json" \
+            "$JIRA_BASE_URL/rest/api/2/issue/$KEY/comment" \
+            -d "{\"body\": \"✅ Test automatisé livré et mergé sur main. PR : $LINK (généré par @claude, revue humaine OK).\"}" \
+            -o /dev/null -w "commentaire Jira -> HTTP %{http_code}\n"
+
+          # 2) Transition best-effort vers Terminé / Done
+          TR=$(curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" "$JIRA_BASE_URL/rest/api/2/issue/$KEY/transitions")
+          TID=$(echo "$TR" | python3 -c "import sys,json,re; ts=json.load(sys.stdin).get('transitions',[]); m=[t for t in ts if re.search(r'termin|done|fini|automat', t['name'], re.I)]; print(m[0]['id'] if m else '')")
+          if [ -n "$TID" ]; then
+            curl -s -X POST -u "$JIRA_EMAIL:$JIRA_API_TOKEN" -H "Content-Type: application/json" \
+              "$JIRA_BASE_URL/rest/api/2/issue/$KEY/transitions" -d "{\"transition\":{\"id\":\"$TID\"}}" \
+              -o /dev/null -w "transition Jira -> HTTP %{http_code}\n"
+          else
+            echo "Pas de transition Terminé/Done trouvée. Statuts dispo :"
+            echo "$TR" | python3 -c "import sys,json; print([t['name'] for t in json.load(sys.stdin).get('transitions',[])])"
+          fi
