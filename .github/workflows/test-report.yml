@@ -60,9 +60,15 @@ jobs:
       - name: Prépare l'aperçu visuel
         if: always()
         run: |
-          shot=$(find test-results -name '*.png' 2>/dev/null | head -1 || true)
           mkdir -p playwright-report
-          if [ -n "$shot" ]; then cp "$shot" playwright-report/evidence.png; echo "aperçu: $shot"; fi
+          # La capture se trouve dans test-results/ ET/OU dans playwright-report/data/ (attachée au rapport).
+          shot=$(find test-results playwright-report/data -name '*.png' 2>/dev/null | head -1 || true)
+          if [ -n "$shot" ]; then
+            cp "$shot" playwright-report/evidence.png
+            echo "Aperçu copié depuis: $shot"
+          else
+            echo "Aucune capture PNG trouvée."; find test-results playwright-report -name '*.png' 2>/dev/null | head
+          fi
 
       - name: Prépare l'artefact Pages
         if: always()
