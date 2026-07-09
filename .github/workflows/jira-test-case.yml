@@ -1,0 +1,57 @@
+name: Jira → Génération de test (@claude)
+
+# Déclenché EN AUTONOMIE depuis Jira (règle d'automatisation → web request → repository_dispatch).
+# Le scénario de test voyage dans client_payload : pas besoin de secrets Jira côté GitHub.
+on:
+  repository_dispatch:
+    types: [jira-test-case]
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    env:
+      # URL publique de LocImmo (pas un secret) pour que `npm test` cible l'app live.
+      RENTAL_APP_BASE_URL: https://locimmo.onrender.com
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install deps + Playwright browsers
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Génère le test Playwright depuis le scénario Jira
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: >-
+            --mcp-config .github/claude-mcp.json
+          prompt: |
+            Tu génères un test Playwright à partir d'un scénario de test provenant de Jira.
+
+            Ticket Jira : ${{ github.event.client_payload.jira_key }}
+            Titre       : ${{ github.event.client_payload.summary }}
+
+            Scénario (source Jira) :
+            ${{ github.event.client_payload.description }}
+
+            Consignes (respecte STRICTEMENT CLAUDE.md) :
+            - Réutilise les Page Objects existants (LoginPage, RegisterPage, NavbarComponent) et les fixtures ; AUCUN sélecteur brut dans le fichier de test.
+            - Base URL = env RENTAL_APP_BASE_URL (LocImmo sur Render). DB vide → crée le compte via /register (factory makeUser). Prévois un warm-up (cold start possible).
+            - Tag de traçabilité @${{ github.event.client_payload.jira_key }} dans le titre du test + test.info().annotations ({ type: 'jira', description: '${{ github.event.client_payload.jira_key }}' }).
+            - Si un sélecteur manque, explore le DOM réel via le MCP Playwright.
+            - Lance `npm test` (au moins le projet chromium) et corrige jusqu'au vert.
+            - Crée une branche dédiée, commit, puis ouvre une PR décrivant le scénario et liée à ${{ github.event.client_payload.jira_key }}. NE MERGE JAMAIS — revue humaine obligatoire.
