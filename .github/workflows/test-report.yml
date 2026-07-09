@@ -61,14 +61,17 @@ jobs:
         if: always()
         run: |
           mkdir -p playwright-report
-          # La capture se trouve dans test-results/ ET/OU dans playwright-report/data/ (attachée au rapport).
+          # 1) Capture produite par le test (si la config de la branche l'active).
           shot=$(find test-results playwright-report/data -name '*.png' 2>/dev/null | head -1 || true)
           if [ -n "$shot" ]; then
             cp "$shot" playwright-report/evidence.png
-            echo "Aperçu copié depuis: $shot"
+            echo "Aperçu (capture de test): $shot"
           else
-            echo "Aucune capture PNG trouvée."; find test-results playwright-report -name '*.png' 2>/dev/null | head
+            # 2) Secours (indépendant de la config de la branche) : capture directe de l'app.
+            echo "Pas de capture de test — capture de secours de l'app."
+            node --input-type=module -e "import { chromium } from '@playwright/test'; const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1280, height: 800 } }); await p.goto(process.env.RENTAL_APP_BASE_URL, { waitUntil: 'load', timeout: 60000 }); await p.waitForTimeout(1500); await p.screenshot({ path: 'playwright-report/evidence.png', fullPage: true }); await b.close();" || echo "capture de secours échouée"
           fi
+          ls -la playwright-report/evidence.png || true
 
       - name: Prépare l'artefact Pages
         if: always()
