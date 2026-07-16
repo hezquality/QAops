@@ -42,10 +42,14 @@ jobs:
 
             Ticket Jira : ${{ github.event.client_payload.jira_key }}
 
-            1) Récupère le scénario depuis Jira :
+            1) Récupère le scénario ET les pièces jointes du ticket :
                curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" -H "Accept: application/json" \
-                 "$JIRA_BASE_URL/rest/api/2/issue/${{ github.event.client_payload.jira_key }}?fields=summary,description"
-               La description contient : endpoint(s) à charger, charge (utilisateurs/durée), et seuils (p95, % erreurs).
+                 "$JIRA_BASE_URL/rest/api/2/issue/${{ github.event.client_payload.jira_key }}?fields=summary,description,attachment"
+               La description contient : parcours, charge (utilisateurs/durée), seuils (p95, % erreurs).
+               Si le ticket a des pièces jointes CSV (jeux de données), TÉLÉCHARGE chacune et place-la dans load/data/ :
+                 pour chaque attachment de type CSV, récupère son URL `content` puis
+                 curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" -L "<content_url>" -o "load/data/<filename>"
+               Le plan JMeter lira ce CSV via CSVDataSet (JDD).
 
             2) Génère un fichier `load/<slug>.jmx` en respectant STRICTEMENT la section « Tests de charge (JMeter) » de CLAUDE.md :
                - Réutilise la structure de `load/listings-smoke.jmx` (plan de référence).
