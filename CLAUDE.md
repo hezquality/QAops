@@ -74,6 +74,22 @@ Pour les tickets Jira de **test de charge/performance**, l'agent génère un **p
 - **Scénario depuis Jira** : dérive endpoint(s), charge (users/durée), et seuils du ticket. Un ThreadGroup par profil de charge si plusieurs.
 - La CI (`.github/workflows/load-report.yml`) exécute `jmeter -n -t <plan>.jmx -Jhost=... -Jthreads=2 -Jloops=30` et publie un **rapport de perf** sur la PR.
 
+### Design pattern — parcours avancés (JDD, auth, extraction, cookies)
+
+Quand le ticket décrit un **parcours multi-étapes** (ex. création de compte → login → action authentifiée), le plan `.jmx` doit assembler ces briques JMeter (une par besoin) :
+
+- **JDD (jeux de données)** → `CSVDataSet` lisant `load/data/<x>.csv` (chemin relatif au `.jmx`), `variableNames` = colonnes, `ignoreFirstLine=true`, `recycle=true`, `shareMode=shareMode.all`. Les colonnes deviennent des variables `${col}`.
+- **Données uniques** (éviter les collisions email/unicité) → `JSR223PreProcessor` (groovy) : `vars.put("EMAIL", "u_" + ctx.getThreadNum() + "_" + System.currentTimeMillis() + "@…")`. Réutiliser `${EMAIL}` dans les étapes suivantes.
+- **Corps JSON** → `HeaderManager` `Content-Type: application/json` (au niveau du Thread Group) + sur chaque sampler POST `HTTPSampler.postBodyRaw=true` avec le JSON dans l'argument (échapper les `"` en `&quot;`).
+- **Gestion des cookies / session** → `CookieManager` (au niveau du Thread Group) : capture le cookie JWT `token` (httpOnly) posé par register/login et le renvoie automatiquement aux requêtes suivantes → l'auth « passe » sans manip.
+- **Extraction de variables** :
+  - `JSONPostProcessor` (JSON Extractor) pour lire une valeur du **corps** (ex. `USER_ID` via `$.user.id`).
+  - `RegexExtractor` avec `useHeaders=true` pour lire le **token dans l'en-tête** `Set-Cookie` (regex `token=([^;]+)`, template `$1$`, refname `TOKEN`).
+- **Assertions par étape** → `ResponseAssertion` sur le code HTTP attendu (201 register, 200 login, 201 dépôt…).
+- **Enchaînement** : les samplers d'un même Thread Group s'exécutent dans l'ordre ; place les extracteurs comme **enfants** du sampler dont ils lisent la réponse.
+
+Ordre type d'un parcours complet : `CSVDataSet` + `CookieManager` + `HeaderManager` (config), puis `Register` (avec JSR223 email + assertion 201) → `Login` (assertion 200 + JSON/Regex extractors) → `Action authentifiée` (assertion). Tout reste **paramétrable** (`__P host/protocol/threads/loops`) et en **charge légère** par défaut.
+
 ## Commandes
 
 - `npm test` — tous les tests | `npm run test:smoke` — smoke uniquement
