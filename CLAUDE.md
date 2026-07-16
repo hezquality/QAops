@@ -62,6 +62,18 @@ Tags utiles : `@smoke`, `@regression`, `@JIRA-xxx`.
 - **⚠️ Finding connu (candidat bug LIM-10/11)** : après inscription/connexion, l'app redirige vers `/` mais **la navbar ne reflète l'état connecté qu'après un rechargement** (`useAuth` ne refetch pas `/api/auth/me` sur navigation client) ; la session cookie est pourtant valide. Pour valider une session dans un test, **recharger la home** (`page.goto('/')`) avant d'asserter l'état connecté.
 - **Page Objects déjà fournis** : `pages/BasePage.ts`, `LoginPage`, `RegisterPage`, `components/NavbarComponent`, fixtures dans `fixtures/pages.fixture.ts`, données/factory dans `data/users.ts`. **Réutilise-les** ; crée de nouveaux Page Objects pour les écrans non couverts.
 
+## Tests de charge (JMeter) — dossier `load/`
+
+Pour les tickets Jira de **test de charge/performance**, l'agent génère un **plan JMeter `.jmx`** dans `load/` (pas de test Playwright).
+
+- **Fichiers** : `load/*.jmx`. Un fichier de référence : `load/listings-smoke.jmx` — **réutilise sa structure**.
+- **Cible paramétrable** (jamais en dur) : `HOST` via `${__P(host,locimmo.onrender.com)}`, `PROTOCOL` via `${__P(protocol,https)}`. Le HTTP Sampler utilise `domain=${HOST}`, `protocol=${PROTOCOL}`.
+- **Charge paramétrable** : `THREADS` via `${__P(threads,2)}`, `LOOPS` via `${__P(loops,30)}`. Défauts **légers** (2 users) — LocImmo tourne sur Render free, ne PAS générer de charge lourde par défaut.
+- **Traçabilité** : mettre `@LIM-xxx` dans le `testname` du TestPlan.
+- **Assertions** : au minimum une `ResponseAssertion` sur le code HTTP (200). Si le ticket fixe des seuils (p95, % erreurs), les rappeler en commentaire — la CI mesure et publie p95/erreurs/latence.
+- **Scénario depuis Jira** : dérive endpoint(s), charge (users/durée), et seuils du ticket. Un ThreadGroup par profil de charge si plusieurs.
+- La CI (`.github/workflows/load-report.yml`) exécute `jmeter -n -t <plan>.jmx -Jhost=... -Jthreads=2 -Jloops=30` et publie un **rapport de perf** sur la PR.
+
 ## Commandes
 
 - `npm test` — tous les tests | `npm run test:smoke` — smoke uniquement

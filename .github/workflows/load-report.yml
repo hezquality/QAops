@@ -1,0 +1,125 @@
+name: Rapport de charge JMeter
+
+# Exécute les plans JMeter du dossier load/ (charge légère) et publie un rapport de perf.
+# - sur une PR touchant load/** : commente la PR avec le résumé + artefact HTML.
+# - manuellement (workflow_dispatch) : pour valider/lancer à la demande.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ["load/**"]
+  workflow_dispatch:
+    inputs:
+      host:
+        description: "Hôte cible (sans https://)"
+        default: "locimmo.onrender.com"
+      threads:
+        description: "Utilisateurs (threads)"
+        default: "2"
+      loops:
+        description: "Itérations par utilisateur"
+        default: "30"
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    env:
+      HOST: ${{ github.event.inputs.host || 'locimmo.onrender.com' }}
+      THREADS: ${{ github.event.inputs.threads || '2' }}
+      LOOPS: ${{ github.event.inputs.loops || '30' }}
+      JMETER_VERSION: "5.6.3"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Installe JMeter
+        run: |
+          wget -q "https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz"
+          tar -xzf "apache-jmeter-${JMETER_VERSION}.tgz"
+          echo "$PWD/apache-jmeter-${JMETER_VERSION}/bin" >> "$GITHUB_PATH"
+
+      - name: Warm-up de la cible (cold start Render)
+        run: |
+          for i in $(seq 1 30); do
+            body=$(curl -s --max-time 15 "https://${HOST}/api/listings" || true)
+            case "$body" in \[*|\{*) echo "cible prête"; break;; esac
+            echo "warm-up $i…"; sleep 5
+          done
+
+      - name: Exécute les plans JMeter (charge légère)
+        run: |
+          mkdir -p load-results
+          for plan in load/*.jmx; do
+            name=$(basename "$plan" .jmx)
+            echo "▶ $name  (host=$HOST threads=$THREADS loops=$LOOPS)"
+            jmeter -n -t "$plan" \
+              -Jhost="$HOST" -Jthreads="$THREADS" -Jloops="$LOOPS" \
+              -Jjmeter.save.saveservice.print_field_names=true \
+              -l "load-results/${name}.jtl" \
+              -e -o "load-results/${name}-report" \
+              -j "load-results/${name}.log" || true
+          done
+
+      - name: Résumé de performance
+        if: always()
+        run: |
+          python3 - <<'PY' > /tmp/summary.md
+          import csv, glob, os
+          out = ["## 📈 Rapport de charge JMeter", ""]
+          jtls = sorted(glob.glob("load-results/*.jtl"))
+          if not jtls:
+              out.append("_Aucun résultat (échec d'exécution ?)._")
+          for jtl in jtls:
+              name = os.path.basename(jtl)[:-4]
+              rows = list(csv.DictReader(open(jtl)))
+              if not rows:
+                  out += [f"### {name}", "_Aucun échantillon._", ""]; continue
+              lat = sorted(int(r["elapsed"]) for r in rows if r.get("elapsed"))
+              n = len(lat)
+              ok = sum(1 for r in rows if r.get("success") == "true")
+              p95 = lat[max(0, int(n * 0.95) - 1)]
+              avg = sum(lat) // n
+              err = round(100 * (n - ok) / n, 2)
+              status = "✅" if err == 0 else "⚠️"
+              out += [f"### {status} {name}",
+                      f"- Échantillons : **{n}** · Erreurs : **{err}%**",
+                      f"- Latence moyenne : **{avg} ms** · p95 : **{p95} ms** · max : **{max(lat)} ms**",
+                      f"- Cible : `{os.environ.get('HOST')}` · Users : {os.environ.get('THREADS')} · Loops : {os.environ.get('LOOPS')}",
+                      ""]
+          open("/tmp/summary.md", "w").write("\n".join(out))
+          print("\n".join(out))
+          PY
+
+      - name: Upload rapport HTML (dashboard JMeter)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jmeter-report
+          path: load-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Commente la PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.existsSync('/tmp/summary.md') ? fs.readFileSync('/tmp/summary.md', 'utf8') : '## 📈 Rapport de charge JMeter\n_Résumé indisponible._';
+            const body = summary + "\n\n_Dashboard HTML complet : artefact **jmeter-report** du run._";
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number, body,
+            });
