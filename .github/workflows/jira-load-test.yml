@@ -1,0 +1,57 @@
+name: Jira → Génération de test de charge (@claude)
+
+# Déclenché depuis Jira (automation → web request → repository_dispatch type jira-load-test).
+# @claude lit le ticket de charge et génère un plan JMeter (.jmx) dans load/, puis ouvre une PR.
+# La PR déclenche ensuite load-report.yml (exécution JMeter + rapport de perf).
+on:
+  repository_dispatch:
+    types: [jira-load-test]
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    env:
+      JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+      JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+      JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Génère le plan JMeter depuis le scénario Jira
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: >-
+            --allowedTools "Edit,Write,Read,Glob,Grep,Bash"
+          prompt: |
+            Tu génères un plan de test de charge JMeter (.jmx) à partir d'un ticket Jira de performance.
+
+            Ticket Jira : ${{ github.event.client_payload.jira_key }}
+
+            1) Récupère le scénario depuis Jira :
+               curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" -H "Accept: application/json" \
+                 "$JIRA_BASE_URL/rest/api/2/issue/${{ github.event.client_payload.jira_key }}?fields=summary,description"
+               La description contient : endpoint(s) à charger, charge (utilisateurs/durée), et seuils (p95, % erreurs).
+
+            2) Génère un fichier `load/<slug>.jmx` en respectant STRICTEMENT la section « Tests de charge (JMeter) » de CLAUDE.md :
+               - Réutilise la structure de `load/listings-smoke.jmx` (plan de référence).
+               - Cible et charge PARAMÉTRABLES via ${__P(host,locimmo.onrender.com)}, ${__P(protocol,https)}, ${__P(threads,2)}, ${__P(loops,30)} — jamais en dur, défauts LÉGERS (Render free).
+               - `@${{ github.event.client_payload.jira_key }}` dans le testname du TestPlan.
+               - Au moins une ResponseAssertion sur le code HTTP. Rappelle les seuils du ticket en commentaire XML.
+
+            3) Crée une branche dédiée, commit le .jmx, puis ouvre une PR décrivant le scénario de charge et liée à ${{ github.event.client_payload.jira_key }}. NE MERGE JAMAIS — revue humaine.
+               (La PR déclenchera automatiquement l'exécution JMeter + le rapport de perf.)
