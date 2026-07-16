@@ -74,6 +74,20 @@ Pour les tickets Jira de **test de charge/performance**, l'agent génère un **p
 - **Scénario depuis Jira** : dérive endpoint(s), charge (users/durée), et seuils du ticket. Un ThreadGroup par profil de charge si plusieurs.
 - La CI (`.github/workflows/load-report.yml`) exécute `jmeter -n -t <plan>.jmx -Jhost=... -Jthreads=2 -Jloops=30` et publie un **rapport de perf** sur la PR.
 
+### Best practices JMeter (obligatoires — issues des recommandations Apache + terrain OSS)
+
+- **1 plan `.jmx` = 1 scénario documenté** (pas de « kitchen sink »). Nom du plan explicite + tag `@LIM-xxx`.
+- **`HTTP Request Defaults`** (config element) : y mettre `domain=${HOST}`, `protocol=${PROTOCOL}` une seule fois ; les samplers n'y remettent que le `path` et la `method`.
+- **`Transaction Controller`** : grouper les samplers d'un même parcours métier (ex. « Inscription+Login+Dépôt ») → le rapport agrège **par transaction** (temps du parcours, pas seulement par requête). `generateParentSample=true`.
+- **Timers / think-time** : ajouter un `ConstantTimer` (ou `GaussianRandomTimer`/`UniformRandomTimer`) pour espacer les requêtes et ne pas matraquer le serveur — réaliste et gentil pour Render free. Paramétrable `${__P(think,500)}` ms.
+- **Pas de listeners dans le plan** (View Results Tree, Aggregate…) : ils plombent la charge. Les résultats viennent de `-l results.jtl -e -o report` (CI).
+- **Non-GUI uniquement** pour l'exécution (le GUI sert à lire/éditer). Déjà géré par la CI.
+- **Données externalisées** : JDD dans `load/data/*.csv` (jamais en dur). Un `.jmx` = logique, un `.csv` = données.
+- **Scripting** : `JSR223` en **groovy** (jamais BeanShell — obsolète/lent).
+- **Corrélation** : extraire tout identifiant dynamique (token, id de session) et le réutiliser — jamais de valeur figée entre étapes.
+- **Assertions ciblées** (code HTTP par étape) ; éviter d'en abuser (surcoût). Les **seuils SLA** (p95, % erreurs) du ticket sont vérifiés par le rapport CI.
+- **Paramétrage** : tout via `${__P(...)}` (host, protocol, threads, loops, think) → surchargeable en CI/local sans éditer le `.jmx`.
+
 ### Design pattern — parcours avancés (JDD, auth, extraction, cookies)
 
 Quand le ticket décrit un **parcours multi-étapes** (ex. création de compte → login → action authentifiée), le plan `.jmx` doit assembler ces briques JMeter (une par besoin) :
