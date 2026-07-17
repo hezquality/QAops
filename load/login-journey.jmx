@@ -142,7 +142,7 @@
           </collectionProp>
         </HeaderManager>
         <hashTree/>
-        <CookieManager guiclass="CookiePanelGUI" testclass="CookieManager" testname="Gestion des cookies (session JWT)" enabled="true">
+        <CookieManager guiclass="CookiePanel" testclass="CookieManager" testname="Gestion des cookies (session JWT)" enabled="true">
           <collectionProp name="CookieManager.cookies"/>
           <boolProp name="CookieManager.clearEachIteration">true</boolProp>
           <stringProp name="CookieManager.policy">standard</stringProp>
