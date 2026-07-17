@@ -35,8 +35,6 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # Débogage temporaire : montre la trace des outils (git/gh) pour diagnostiquer la non-création de PR.
-          show_full_output: true
           claude_args: >-
             --allowedTools "Edit,Write,Read,Glob,Grep,Bash"
           prompt: |
