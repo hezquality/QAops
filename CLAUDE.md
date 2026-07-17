@@ -82,6 +82,7 @@ Pour les tickets Jira de **test de charge/performance**, l'agent génère un **p
 - **Timers / think-time** : ajouter un `ConstantTimer` (ou `GaussianRandomTimer`/`UniformRandomTimer`) pour espacer les requêtes et ne pas matraquer le serveur — réaliste et gentil pour Render free. Paramétrable `${__P(think,500)}` ms.
 - **Pas de listeners dans le plan** (View Results Tree, Aggregate…) : ils plombent la charge. Les résultats viennent de `-l results.jtl -e -o report` (CI).
 - **Non-GUI uniquement** pour l'exécution (le GUI sert à lire/éditer). Déjà géré par la CI.
+- **Ouvrable en GUI (`guiclass` exacts)** : chaque élément doit porter le nom de classe GUI **réel** de JMeter, sinon l'ouverture dans l'IHM échoue en `ClassNotFoundException` (l'exécution non-GUI, elle, ignore `guiclass` — le bug passe donc inaperçu en CI). Pièges fréquents : `CookieManager` → `guiclass="CookiePanel"` (⚠️ **PAS** `CookiePanelGUI`) ; `CacheManager` → `CacheManagerGui` ; `CSVDataSet` → `TestBeanGUI`. En cas de doute, **copier le `guiclass` depuis un élément équivalent de `load/listings-smoke.jmx`** plutôt que l'inventer.
 - **Données externalisées** : JDD dans `load/data/*.csv` (jamais en dur). Un `.jmx` = logique, un `.csv` = données.
 - **Scripting** : `JSR223` en **groovy** (jamais BeanShell — obsolète/lent).
 - **Corrélation** : extraire tout identifiant dynamique (token, id de session) et le réutiliser — jamais de valeur figée entre étapes.
