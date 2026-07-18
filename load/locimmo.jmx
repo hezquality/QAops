@@ -564,7 +564,7 @@ if (&apos;${gp}&apos;!=&apos;TRXX&apos;) {
         <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="TR1 File Config" enabled="true">
           <stringProp name="delimiter">,</stringProp>
           <stringProp name="fileEncoding">utf8</stringProp>
-          <stringProp name="filename">data/${CSV-TR1}</stringProp>
+          <stringProp name="filename">data/${CSV-TR01}</stringProp>
           <boolProp name="quotedData">True</boolProp>
           <boolProp name="recycle">True</boolProp>
           <stringProp name="shareMode">shareMode.group</stringProp>
@@ -1051,7 +1051,7 @@ return waitPacing</stringProp>
         <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="TR2 File Config" enabled="true">
           <stringProp name="delimiter">,</stringProp>
           <stringProp name="fileEncoding">utf8</stringProp>
-          <stringProp name="filename">data/${CSV-TR2}</stringProp>
+          <stringProp name="filename">data/${CSV-TR02}</stringProp>
           <boolProp name="quotedData">True</boolProp>
           <boolProp name="recycle">True</boolProp>
           <stringProp name="shareMode">shareMode.group</stringProp>
