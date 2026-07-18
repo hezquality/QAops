@@ -80,7 +80,7 @@ Pour les tickets Jira de **test de charge/performance**, l'agent génère un **p
 | CSV de logins par transaction | Workload mixte / répartition de charge |
 | Config globale (Cookie/Cache/Header/HTTP Defaults) | `ConstantThroughputTimer`, profils de charge |
 
-On peut laisser les `ThreadGroup` « Tests TRxx » **désactivés** (1 VU / 1 boucle) pour le **tir unitaire** en local — mais jamais de charge réelle.
+**Inclure un `ThreadGroup` « Tests TRxx » DÉSACTIVÉ par transaction** (1 VU / 1 boucle, appelant la transaction via `ModuleController`) : la CI `load-report.yml` les **active automatiquement** pour un **tir unitaire de validation** (vérifie que les transactions s'exécutent), sans jamais jouer de charge. Ne jamais laisser de thread group d'injection actif.
 
 ### Ossature (fragments `TestFragmentController` désactivés = bibliothèques)
 

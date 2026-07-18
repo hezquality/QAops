@@ -1,8 +1,12 @@
-name: Rapport de charge JMeter
+name: Validation JMeter (transactions PH)
 
-# Exécute les plans JMeter du dossier load/ (charge légère) et publie un rapport de perf.
-# - sur une PR touchant load/** : commente la PR avec le résumé + artefact HTML.
-# - manuellement (workflow_dispatch) : pour valider/lancer à la demande.
+# Valide les plans JMeter du dossier load/ produits selon la convention ATAKAMA « PH ».
+# Rappel doctrine : la CHARGE réelle est jouée par le cockpit / l'agent ph_jmeter, PAS ici.
+# Cette CI fait donc :
+#   1) un LINT structurel du .jmx (toujours utile, même sans exécution) ;
+#   2) un TIR UNITAIRE best-effort : active les ThreadGroups « Tests TRxx » (1 VU) pour vérifier
+#      que les transactions s'exécutent de bout en bout (validation fonctionnelle, pas de charge).
+# Déclencheurs : PR touchant load/** (commente la PR) ; ou manuel (workflow_dispatch).
 on:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -12,12 +16,6 @@ on:
       host:
         description: "Hôte cible (sans https://)"
         default: "locimmo.onrender.com"
-      threads:
-        description: "Utilisateurs (threads)"
-        default: "2"
-      loops:
-        description: "Itérations par utilisateur"
-        default: "30"
 
 permissions:
   contents: read
@@ -25,12 +23,10 @@ permissions:
   issues: write
 
 jobs:
-  load:
+  validate:
     runs-on: ubuntu-latest
     env:
       HOST: ${{ github.event.inputs.host || 'locimmo.onrender.com' }}
-      THREADS: ${{ github.event.inputs.threads || '2' }}
-      LOOPS: ${{ github.event.inputs.loops || '30' }}
       JMETER_VERSION: "5.6.3"
     steps:
       - name: Checkout
@@ -44,69 +40,123 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Installe JMeter
+      - name: Installe JMeter (+ plugins jpgc best-effort)
         run: |
           wget -q "https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz"
           tar -xzf "apache-jmeter-${JMETER_VERSION}.tgz"
-          echo "$PWD/apache-jmeter-${JMETER_VERSION}/bin" >> "$GITHUB_PATH"
+          JM="$PWD/apache-jmeter-${JMETER_VERSION}"
+          echo "$JM/bin" >> "$GITHUB_PATH"
+          # Plugins Manager + jeux jpgc utilisés par le template PH (UltimateThreadGroup, ParameterizedController).
+          # Best-effort : si l'install échoue, le lint reste valable et le tir unitaire dégrade proprement.
+          ( wget -q -O "$JM/lib/ext/jmeter-plugins-manager.jar" \
+              "https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-manager/1.10/jmeter-plugins-manager-1.10.jar" \
+            && wget -q -O "$JM/lib/cmdrunner.jar" \
+              "https://repo1.maven.org/maven2/kg/apc/cmdrunner/2.3/cmdrunner-2.3.jar" \
+            && java -cp "$JM/lib/ext/jmeter-plugins-manager.jar" \
+              org.jmeterplugins.repository.PluginManagerCMDInstaller \
+            && "$JM/bin/PluginsManagerCMD.sh" install jpgc-casutg,jpgc-ppc ) || echo "⚠️ plugins jpgc non installés (tir unitaire best-effort)"
+
+      - name: Lint structurel des plans (convention PH)
+        if: always()
+        run: |
+          python3 - <<'PY' > /tmp/lint.md
+          import glob, os, re, xml.etree.ElementTree as ET
+          out = ["## 🧪 Validation JMeter (convention ATAKAMA PH)", ""]
+          plans = sorted(glob.glob("load/*.jmx"))
+          if not plans:
+              out.append("_Aucun plan `load/*.jmx`._")
+          for p in plans:
+              name = os.path.basename(p)
+              try:
+                  raw = open(p, encoding="utf-8").read()
+                  ET.fromstring(raw)  # XML bien formé
+              except Exception as e:
+                  out += [f"### ❌ {name}", f"- XML invalide : `{e}`", ""]; continue
+              checks = [
+                  ("XML bien formé", True),
+                  ("Fragment TRANSACTIONS", 'testname="TRANSACTIONS"' in raw),
+                  ("Fragment FONCTIONS", 'testname="FONCTIONS"' in raw),
+                  ("Blocs UDV paramétrés (${__P})", "UDV_" in raw and "__P(" in raw),
+                  ("JDD login,pass référencé", "login,pass" in raw or "${CSV-TR" in raw),
+                  ("Nommage TRxx_ présent", bool(re.search(r'TR0?\d', raw))),
+                  ("guiclass CookiePanel (pas ...GUI)", "CookiePanelGUI" not in raw),
+                  ("Aucune injection ACTIVE (UltimateThreadGroup)",
+                     not re.search(r'UltimateThreadGroup[^>]*enabled="[Tt]rue"', raw)),
+              ]
+              for csv in sorted(set(re.findall(r'>data/([A-Za-z0-9_.\-]+\.csv)<', raw))):
+                  checks.append((f"CSV présent : data/{csv}", os.path.exists(os.path.join("load/data", csv))))
+              ok = all(v for _, v in checks)
+              out.append(f"### {'✅' if ok else '⚠️'} {name}")
+              out += [f"- {'✅' if v else '❌'} {label}" for label, v in checks]
+              out.append("")
+          open("/tmp/lint.md", "w").write("\n".join(out))
+          print("\n".join(out))
+          PY
 
       - name: Warm-up de la cible (cold start Render)
+        if: always()
         run: |
-          for i in $(seq 1 30); do
+          for i in $(seq 1 24); do
             body=$(curl -s --max-time 15 "https://${HOST}/api/listings" || true)
             case "$body" in \[*|\{*) echo "cible prête"; break;; esac
             echo "warm-up $i…"; sleep 5
           done
 
-      - name: Exécute les plans JMeter (charge légère)
+      - name: Tir unitaire des transactions (best-effort, 1 VU)
+        if: always()
         run: |
           mkdir -p load-results
           for plan in load/*.jmx; do
+            [ -e "$plan" ] || continue
             name=$(basename "$plan" .jmx)
-            echo "▶ $name  (host=$HOST threads=$THREADS loops=$LOOPS)"
-            jmeter -n -t "$plan" \
-              -Jhost="$HOST" -Jthreads="$THREADS" -Jloops="$LOOPS" \
+            unit="load-results/${name}-unit.jmx"
+            # Active les ThreadGroups « Tests TRxx » (1 VU) pour exécuter chaque transaction une fois.
+            python3 - "$plan" "$unit" <<'PY'
+          import sys, re
+          src, dst = sys.argv[1], sys.argv[2]
+          t = open(src, encoding="utf-8").read()
+          # enabled="false" -> "true" sur les seuls ThreadGroups nommés "Tests ..."
+          t = re.sub(r'(<ThreadGroup[^>]*testname="Tests [^"]*"[^>]*?)enabled="false"', r'\1enabled="true"', t)
+          open(dst, "w", encoding="utf-8").write(t)
+          print("unit plan:", dst)
+          PY
+            echo "▶ tir unitaire $name (host=$HOST, 1 VU)"
+            jmeter -n -t "$unit" -Jhost="$HOST" -Jprojet="${name}" \
               -Jjmeter.save.saveservice.print_field_names=true \
-              -l "load-results/${name}.jtl" \
-              -e -o "load-results/${name}-report" \
-              -j "load-results/${name}.log" || true
+              -l "load-results/${name}.jtl" -j "load-results/${name}.log" || true
           done
 
-      - name: Résumé de performance
+      - name: Résumé du tir unitaire
         if: always()
         run: |
-          python3 - <<'PY' > /tmp/summary.md
+          python3 - <<'PY' >> /tmp/lint.md
           import csv, glob, os
-          out = ["## 📈 Rapport de charge JMeter", ""]
+          out = ["", "## 🎯 Tir unitaire des transactions (validation fonctionnelle — pas de charge)", ""]
           jtls = sorted(glob.glob("load-results/*.jtl"))
           if not jtls:
-              out.append("_Aucun résultat (échec d'exécution ?)._")
+              out.append("_Aucun échantillon : injection non générée (gérée par le cockpit) ou plugins jpgc absents. Le lint ci-dessus reste la validation de référence._")
           for jtl in jtls:
               name = os.path.basename(jtl)[:-4]
               rows = list(csv.DictReader(open(jtl)))
               if not rows:
-                  out += [f"### {name}", "_Aucun échantillon._", ""]; continue
-              lat = sorted(int(r["elapsed"]) for r in rows if r.get("elapsed"))
-              n = len(lat)
+                  out += [f"### {name}", "_0 échantillon._", ""]; continue
+              # par label de transaction/étape
               ok = sum(1 for r in rows if r.get("success") == "true")
-              p95 = lat[max(0, int(n * 0.95) - 1)]
-              avg = sum(lat) // n
-              err = round(100 * (n - ok) / n, 2)
-              status = "✅" if err == 0 else "⚠️"
+              n = len(rows)
+              lat = [int(r["elapsed"]) for r in rows if r.get("elapsed")]
+              avg = sum(lat)//len(lat) if lat else 0
+              status = "✅" if ok == n else "⚠️"
               out += [f"### {status} {name}",
-                      f"- Échantillons : **{n}** · Erreurs : **{err}%**",
-                      f"- Latence moyenne : **{avg} ms** · p95 : **{p95} ms** · max : **{max(lat)} ms**",
-                      f"- Cible : `{os.environ.get('HOST')}` · Users : {os.environ.get('THREADS')} · Loops : {os.environ.get('LOOPS')}",
-                      ""]
-          open("/tmp/summary.md", "w").write("\n".join(out))
+                      f"- Échantillons : **{n}** · OK : **{ok}/{n}** · latence moy. : **{avg} ms**", ""]
+          open("/tmp/lint.md", "a").write("\n".join(out))
           print("\n".join(out))
           PY
 
-      - name: Upload rapport HTML (dashboard JMeter)
+      - name: Upload artefacts (plans unitaires, jtl, logs)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: jmeter-report
+          name: jmeter-validation
           path: load-results/
           retention-days: 14
           if-no-files-found: ignore
@@ -117,9 +167,11 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const summary = fs.existsSync('/tmp/summary.md') ? fs.readFileSync('/tmp/summary.md', 'utf8') : '## 📈 Rapport de charge JMeter\n_Résumé indisponible._';
-            const body = summary + "\n\n_Dashboard HTML complet : artefact **jmeter-report** du run._";
+            const body = fs.existsSync('/tmp/lint.md')
+              ? fs.readFileSync('/tmp/lint.md', 'utf8')
+              : '## 🧪 Validation JMeter\n_Résumé indisponible._';
             await github.rest.issues.createComment({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number, body,
+              issue_number: context.issue.number,
+              body: body + "\n\n_Artefacts (plans unitaires, jtl, logs) : **jmeter-validation** du run. Charge réelle → cockpit / agent ph_jmeter._",
             });
