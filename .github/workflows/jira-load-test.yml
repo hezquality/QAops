@@ -38,20 +38,23 @@ jobs:
           claude_args: >-
             --allowedTools "Edit,Write,Read,Glob,Grep,Bash"
           prompt: |
-            Tu génères un plan de test de charge JMeter (.jmx) à partir d'un ticket Jira de performance.
+            Tu génères un plan de test de charge JMeter (.jmx) à partir d'un ticket Jira de performance,
+            au format du template partenaire ATAKAMA « PH ».
 
             Ticket Jira : ${{ github.event.client_payload.jira_key }}
 
             1) Récupère le scénario depuis Jira :
                curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" -H "Accept: application/json" \
                  "$JIRA_BASE_URL/rest/api/2/issue/${{ github.event.client_payload.jira_key }}?fields=summary,description"
-               La description contient le parcours, la charge, les seuils, et le JDD (crée load/data/<x>.csv à partir des données listées dans le ticket).
+               La description décrit des TRANSACTIONS (parcours métier), leurs ÉTAPES, les fonctions communes et les
+               colonnes des JDD. Crée les JDD `load/data/<PROJET>-TRxx.csv` (colonnes login,pass) depuis le ticket / ses pièces jointes.
 
-            2) Génère un fichier `load/<slug>.jmx` en respectant STRICTEMENT la section « Tests de charge (JMeter) » de CLAUDE.md :
-               - Réutilise la structure de `load/listings-smoke.jmx` (plan de référence).
-               - Cible et charge PARAMÉTRABLES via ${__P(host,locimmo.onrender.com)}, ${__P(protocol,https)}, ${__P(threads,2)}, ${__P(loops,30)} — jamais en dur, défauts LÉGERS (Render free).
-               - `@${{ github.event.client_payload.jira_key }}` dans le testname du TestPlan.
-               - Au moins une ResponseAssertion sur le code HTTP. Rappelle les seuils du ticket en commentaire XML.
+            2) Génère `load/<projet>.jmx` en respectant STRICTEMENT la section « Tests de charge (JMeter) — convention ATAKAMA PH » de CLAUDE.md :
+               - Réutilise la structure et les briques techniques de `load/templates/PH_Template_Web_Workload.jmx` (RÉUTILISE VERBATIM `FONCTIONS_INTERNES`, la config globale et les blocs `UDV_*`).
+               - Génère UNIQUEMENT la logique métier : fragments `TRANSACTIONS` (TRxx_<nom> → étapes ETxx_yy_<nom>), `FONCTIONS` (briques réutilisables appelées par ModuleController), JDD, blocs UDV.
+               - NE GÉNÈRE PAS l'injection ni les profils de charge (UltimateThreadGroup, paliers, VUs, ramp/hold, throughput) : c'est le cockpit / l'agent ph_jmeter qui les pose. Laisse au plus des ThreadGroups « Tests TRxx » DÉSACTIVÉS pour le tir unitaire.
+               - Paramétrage via `${__P(...)}` (host, port, protocole, projet, timeout…). `@${{ github.event.client_payload.jira_key }}` dans TestPlan.comments.
+               - Conventions de nommage strictes (TRxx_/ETxx_yy_), gestion d'erreur (`If KO` → ErrorLog), pacing normalisé (`PauseFinEtape` UniformRandomTimer), `guiclass` valides (ouverture GUI).
 
-            3) Crée une branche dédiée, commit le .jmx, puis ouvre une PR décrivant le scénario de charge et liée à ${{ github.event.client_payload.jira_key }}. NE MERGE JAMAIS — revue humaine.
-               (La PR déclenchera automatiquement l'exécution JMeter + le rapport de perf.)
+            3) Crée une branche dédiée, commit le `.jmx` + les CSV, puis ouvre une PR décrivant les transactions/étapes et liée à ${{ github.event.client_payload.jira_key }}. NE MERGE JAMAIS — revue humaine.
+               (Rappel : la charge réelle est jouée par le cockpit ; la CI se limite à valider/tirer unitairement les transactions.)

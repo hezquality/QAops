@@ -62,51 +62,84 @@ Tags utiles : `@smoke`, `@regression`, `@JIRA-xxx`.
 - **⚠️ Finding connu (candidat bug LIM-10/11)** : après inscription/connexion, l'app redirige vers `/` mais **la navbar ne reflète l'état connecté qu'après un rechargement** (`useAuth` ne refetch pas `/api/auth/me` sur navigation client) ; la session cookie est pourtant valide. Pour valider une session dans un test, **recharger la home** (`page.goto('/')`) avant d'asserter l'état connecté.
 - **Page Objects déjà fournis** : `pages/BasePage.ts`, `LoginPage`, `RegisterPage`, `components/NavbarComponent`, fixtures dans `fixtures/pages.fixture.ts`, données/factory dans `data/users.ts`. **Réutilise-les** ; crée de nouveaux Page Objects pour les écrans non couverts.
 
-## Tests de charge (JMeter) — dossier `load/`
+## Tests de charge (JMeter) — convention ATAKAMA « PH » (dossier `load/`)
 
-Pour les tickets Jira de **test de charge/performance**, l'agent génère un **plan JMeter `.jmx`** dans `load/` (pas de test Playwright).
+Pour les tickets Jira de **test de charge/performance**, l'agent génère un **plan JMeter `.jmx`** dans `load/` (pas de test Playwright), **au format du template partenaire ATAKAMA**.
 
-- **Fichiers** : `load/*.jmx`. Un fichier de référence : `load/listings-smoke.jmx` — **réutilise sa structure**.
-- **Cible paramétrable** (jamais en dur) : `HOST` via `${__P(host,locimmo.onrender.com)}`, `PROTOCOL` via `${__P(protocol,https)}`. Le HTTP Sampler utilise `domain=${HOST}`, `protocol=${PROTOCOL}`.
-- **Charge paramétrable** : `THREADS` via `${__P(threads,2)}`, `LOOPS` via `${__P(loops,30)}`. Défauts **légers** (2 users) — LocImmo tourne sur Render free, ne PAS générer de charge lourde par défaut.
-- **Traçabilité** : mettre `@LIM-xxx` dans le `testname` du TestPlan.
-- **Assertions** : au minimum une `ResponseAssertion` sur le code HTTP (200). Si le ticket fixe des seuils (p95, % erreurs), les rappeler en commentaire — la CI mesure et publie p95/erreurs/latence.
-- **Scénario depuis Jira** : dérive endpoint(s), charge (users/durée), et seuils du ticket. Un ThreadGroup par profil de charge si plusieurs.
-- La CI (`.github/workflows/load-report.yml`) exécute `jmeter -n -t <plan>.jmx -Jhost=... -Jthreads=2 -Jloops=30` et publie un **rapport de perf** sur la PR.
+> **Doctrine (imposée par l'équipe perf / cockpit `ph_jmeter`)** : l'agent génère **la logique métier** (transactions + fonctions réutilisables + JDD), **PAS l'injection ni les profils de charge**. L'injection, les paliers, le nombre de VUs, ramp/hold et le workload mixte sont posés et modifiés **automatiquement par le cockpit / l'agent ph_jmeter**. **Ne jamais générer** de `UltimateThreadGroup`, paliers, `ConstantThroughputTimer`, ni de profil de charge.
 
-### Best practices JMeter (obligatoires — issues des recommandations Apache + terrain OSS)
+- **Template de référence (à réutiliser tel quel)** : `load/templates/PH_Template_Web_Workload.jmx`. **Copie sa structure et ses briques techniques verbatim** (blocs UDV, config globale, `FONCTIONS_INTERNES`) ; n'invente rien qui existe déjà dedans.
+- **Fichiers produits** : `load/<projet>.jmx` + les JDD `load/data/<PROJET>-TRxx.csv`.
 
-- **1 plan `.jmx` = 1 scénario documenté** (pas de « kitchen sink »). Nom du plan explicite + tag `@LIM-xxx`.
-- **`HTTP Request Defaults`** (config element) : y mettre `domain=${HOST}`, `protocol=${PROTOCOL}` une seule fois ; les samplers n'y remettent que le `path` et la `method`.
-- **`Transaction Controller`** : grouper les samplers d'un même parcours métier (ex. « Inscription+Login+Dépôt ») → le rapport agrège **par transaction** (temps du parcours, pas seulement par requête). `generateParentSample=true`.
-- **Timers / think-time** : ajouter un `ConstantTimer` (ou `GaussianRandomTimer`/`UniformRandomTimer`) pour espacer les requêtes et ne pas matraquer le serveur — réaliste et gentil pour Render free. Paramétrable `${__P(think,500)}` ms.
-- **Pas de listeners dans le plan** (View Results Tree, Aggregate…) : ils plombent la charge. Les résultats viennent de `-l results.jtl -e -o report` (CI).
-- **Non-GUI uniquement** pour l'exécution (le GUI sert à lire/éditer). Déjà géré par la CI.
-- **Ouvrable en GUI (`guiclass` exacts)** : chaque élément doit porter le nom de classe GUI **réel** de JMeter, sinon l'ouverture dans l'IHM échoue en `ClassNotFoundException` (l'exécution non-GUI, elle, ignore `guiclass` — le bug passe donc inaperçu en CI). Pièges fréquents : `CookieManager` → `guiclass="CookiePanel"` (⚠️ **PAS** `CookiePanelGUI`) ; `CacheManager` → `CacheManagerGui` ; `CSVDataSet` → `TestBeanGUI`. En cas de doute, **copier le `guiclass` depuis un élément équivalent de `load/listings-smoke.jmx`** plutôt que l'inventer.
-- **Données externalisées** : JDD dans `load/data/*.csv` (jamais en dur). Un `.jmx` = logique, un `.csv` = données.
-- **Scripting** : `JSR223` en **groovy** (jamais BeanShell — obsolète/lent).
-- **Corrélation** : extraire tout identifiant dynamique (token, id de session) et le réutiliser — jamais de valeur figée entre étapes.
-- **Assertions ciblées** (code HTTP par étape) ; éviter d'en abuser (surcoût). Les **seuils SLA** (p95, % erreurs) du ticket sont vérifiés par le rapport CI.
-- **Paramétrage** : tout via `${__P(...)}` (host, protocol, threads, loops, think) → surchargeable en CI/local sans éditer le `.jmx`.
+### Ce que l'agent GÉNÈRE vs NE génère PAS
 
-### Design pattern — parcours avancés (JDD, auth, extraction, cookies)
+| ✅ Génère (logique métier) | ❌ Ne génère PAS (géré par le cockpit) |
+|---|---|
+| Fragments `TRANSACTIONS`, `FONCTIONS`, `FONCTIONS_INTERNES` | Thread Groups d'injection / `UltimateThreadGroup` |
+| Blocs `UDV_*` (paramétrage `${__P(...)}`) | Paliers, VUs, `PctVus`, `tRamp`, `tHold`, `NbPaliers` |
+| CSV de logins par transaction | Workload mixte / répartition de charge |
+| Config globale (Cookie/Cache/Header/HTTP Defaults) | `ConstantThroughputTimer`, profils de charge |
 
-Quand le ticket décrit un **parcours multi-étapes** (ex. création de compte → login → action authentifiée), le plan `.jmx` doit assembler ces briques JMeter (une par besoin) :
+On peut laisser les `ThreadGroup` « Tests TRxx » **désactivés** (1 VU / 1 boucle) pour le **tir unitaire** en local — mais jamais de charge réelle.
 
-- **JDD (jeux de données)** → `CSVDataSet` lisant `load/data/<x>.csv` (chemin relatif au `.jmx`), `variableNames` = colonnes, `ignoreFirstLine=true`, `recycle=true`, `shareMode=shareMode.all`. Les colonnes deviennent des variables `${col}`.
-- **Données uniques** (éviter les collisions email/unicité) → `JSR223PreProcessor` (groovy) : `vars.put("EMAIL", "u_" + ctx.getThreadNum() + "_" + System.currentTimeMillis() + "@…")`. Réutiliser `${EMAIL}` dans les étapes suivantes.
-- **Corps JSON** → `HeaderManager` `Content-Type: application/json` (au niveau du Thread Group) + sur chaque sampler POST `HTTPSampler.postBodyRaw=true` avec le JSON dans l'argument (échapper les `"` en `&quot;`).
-- **Gestion des cookies / session** → `CookieManager` (au niveau du Thread Group) : capture le cookie JWT `token` (httpOnly) posé par register/login et le renvoie automatiquement aux requêtes suivantes → l'auth « passe » sans manip.
-- **Extraction de variables** :
-  - `JSONPostProcessor` (JSON Extractor) pour lire une valeur du **corps** (ex. `USER_ID` via `$.user.id`).
-  - `RegexExtractor` avec `useHeaders=true` pour lire le **token dans l'en-tête** `Set-Cookie` (regex `token=([^;]+)`, template `$1$`, refname `TOKEN`).
-- **Assertions par étape** → `ResponseAssertion` sur le code HTTP attendu (201 register, 200 login, 201 dépôt…).
-- **Enchaînement** : les samplers d'un même Thread Group s'exécutent dans l'ordre ; place les extracteurs comme **enfants** du sampler dont ils lisent la réponse.
-- **Action unique par utilisateur (une seule fois, pas à chaque itération)** → `Once Only Controller` (`testclass="OnceOnlyController"`, `guiclass="OnceOnlyControllerGui"`) : ses enfants ne s'exécutent qu'à la **1re itération de chaque thread**. Idéal pour un **onboarding** (inscription) réalisé une fois, alors que la connexion + les actions se rejouent à chaque boucle. À préférer au `setUp Thread Group` quand l'action « unique » doit rester **dans** le parcours du VU (et non dans une phase d'amorçage séparée).
-- **Branche conditionnelle (exécuter selon une condition métier)** → `If Controller` (`testclass="IfController"`, `guiclass="IfControllerPanel"`) avec `IfController.useExpression=true` et une condition **groovy** renvoyant un booléen, typiquement pilotée par une colonne du JDD : `${__groovy(vars.get("role")=="bailleur",)}`. Mettre `IfController.evaluateAll=false`. Un `If Controller` par branche (ex. « Si bailleur » vs « Si locataire »).
-- **Réutilisation OBLIGATOIRE des variables extraites (pas d'extracteur mort)** → toute variable corrélée doit servir ensuite : dans un **path** (`GET /api/listings/${LISTING_ID}`), un **corps**, un **header**, ou au minimum une **assertion**. Ex. : `USER_ID` vérifié dans la réponse `/api/auth/me` ; `LISTING_ID` (extrait du dépôt) rejoué en GET pour confirmer la publication ; `FIRST_ID` (1er résultat de recherche `$.listings[0].id`) rejoué en consultation. ⚠️ LocImmo étant en **auth par cookie httpOnly**, ne PAS fabriquer un header `Authorization: Bearer ${TOKEN}` (l'app l'ignore) : le `CookieManager` porte la session ; `TOKEN` sert alors de **preuve de capture** (assertion « non vide »), pas de header.
+### Ossature (fragments `TestFragmentController` désactivés = bibliothèques)
 
-Ordre type d'un parcours complet : `CSVDataSet` + `CookieManager` + `HeaderManager` (config), puis **`Once Only Controller` → `Register`** (action unique, assertion 201) ; puis, à chaque itération, `Login` (assertion 200 + JSON/Regex extractors) → **`If Controller` par rôle** → `Action authentifiée` (assertion + **réutilisation** des variables extraites). Tout reste **paramétrable** (`__P host/protocol/threads/loops`) et en **charge légère** par défaut.
+```
+TestPlan  <PROJET>_Web_Workload
+├─ UDV_Tir · UDV_Projet · UDV_TransactionsEtapes · UDV_TransactionsDurees
+│  · UDV_TransactionsFichiers · UDV_Interne          (tout en ${__P(nom,defaut)})
+├─ Config : HTTP Request Defaults · CookieManager(CookiePanel) · CacheManager
+│  · AuthManager · HeaderManager (entêtes navigateur + header `atk_etape`)
+├─ FONCTIONS_INTERNES   (helpers JSR223 groovy — RÉUTILISER VERBATIM du template)
+│   ├─ ErrorLog      → log erreurs (CSV + réponse) dans ${WORK}/data/${FERR}
+│   └─ StartTrFiles  → crée l'entête des fichiers d'erreur
+├─ FONCTIONS            (briques métier réutilisables : 1 GenericController + sampler(s))
+│   ex. connexion · deconnexion · recherche · panier …  (appelées par ModuleController)
+└─ TRANSACTIONS
+    ├─ TR01_<nom> : CSV(${PROJET}-TR01) + _StartTr + ET01_01_… → ET01_02_… → …
+    └─ TR02_<nom> : CSV(${PROJET}-TR02) + _StartTr + ET02_01_… → …
+```
+
+### Paramétrage — blocs `UDV_*` séparés par thème (Arguments), tout via `${__P(nom,defaut)}`
+- `UDV_Tir` : `TIR`, `TYPE` (unitaire/qualif/performance/endurance/stress), `CONTINUE_ONERROR`, `TIMEOUT`, `HTTPPOOL`, `WORK`, `HOME`.
+- `UDV_Projet` : `PROJET`, `HOST`, `PORT`, `PROTOCOLE`.
+- `UDV_TransactionsEtapes` : `NBE_TRxx` = nombre d'étapes de la transaction.
+- `UDV_TransactionsDurees` : `DUREE_TRxx` (durée cible normalisée) + `DUREE_TRxx_MIN` = `${__jexl3(${NBE_TRxx}*1000)}`.
+- `UDV_TransactionsFichiers` : `CSV-TRxx` = `${PROJET}-TRxx.csv`.
+- `UDV_Interne` : `FERR` = `${PROJET}-${TYPE}-${TIR}`, `atk_etape`.
+
+### JDD (données) — 1 CSV par transaction
+`CSVDataSet` lisant `data/${CSV-TRxx}` (= `data/${PROJET}-TRxx.csv`), colonnes **`login,pass`**, `shareMode.group`, `recycle=true`, `ignoreFirstLine=true`, `quotedData=true`, `delimiter=,`. (Réfs : `load/data/demo-TR01.csv`, `demo-TR02.csv`.) Les colonnes deviennent `${login}`, `${pass}`.
+
+### Patron d'une transaction `TRxx_<nom>` (dans le fragment TRANSACTIONS)
+1. `CSVDataSet` de la transaction (`data/${CSV-TRxx}`).
+2. `_StartTr` (`GenericController`) : `InitTr` (JSR223 `vars.put("GP","TRxx")`) → `StartTrVars` (JSR223 qui calcule le pacing `ETP` pour **normaliser la durée** de la transaction à `DUREE_TRxx` sur `NBE_TRxx` étapes) → `StartTrFiles` (init fichiers d'erreurs, via `ModuleController` → FONCTIONS_INTERNES).
+3. Les étapes `ETxx_yy_<nom>`, dans l'ordre.
+
+### Patron d'une étape `ETxx_yy_<nom>` (un `TransactionController` par étape)
+1. `_StartEtp` (`TestAction` pause 0 + `JSR223PreProcessor` `vars.put("atk_etape","ETxx_yy_<nom>")`) — traçabilité, renvoyée en header HTTP `atk_etape`.
+2. **L'appel** : soit `ModuleController` → `FONCTIONS/<brique>` (réutilisation d'une fonction), soit un `HTTPSamplerProxy` inline nommé `yyyy_` (`domain=${HOST}`, `port=${PORT}`, `protocol=${PROTOCOLE}`).
+3. `If KO` (`IfController`, `${__jexl3(${JMeterThread.last_sample_ok}==false)}`) → `setErrorLog` → `ModuleController` → FONCTIONS_INTERNES/`ErrorLog`.
+4. `PauseFinEtape` (`TestAction` + `UniformRandomTimer` `delay=${__jexl3(${ETP}/3)}`, `range=${ETP}`) — think-time **normalisé** (pas de sleep arbitraire).
+5. À partir de la 2e étape, **envelopper** l'étape dans un `IfController` « Continue ETxx_yy » (`${__jexl3(${CONTINUE_ONERROR}==true || ${JMeterThread.last_sample_ok}==true)}`) → arrêt propre du parcours en cas d'échec, sauf si `CONTINUE_ONERROR`.
+
+### Fonctions réutilisables
+- **Briques métier** → fragment `FONCTIONS` : une action = un `GenericController` nommé + son/ses `HTTPSamplerProxy`. Appelée depuis les étapes par `ModuleController` (jamais dupliquer un appel : le factoriser en fonction).
+- **Helpers techniques** → fragment `FONCTIONS_INTERNES` (`ErrorLog`, `StartTrFiles`) : **réutiliser tels quels** depuis le template (JSR223 groovy, jamais BeanShell).
+
+### Conventions de nommage (strictes)
+- Transaction : `TRxx_<nom>` (ex. `TR01_navigation`). Étape : `ETxx_yy_<nom>` (ex. `ET01_02_menu`). Sampler inline : `yyyy_`. Variable groupe : `GP`. Label d'étape courant : `atk_etape`.
+
+### Config globale (au niveau TestPlan, depuis le template)
+`HTTP Request Defaults` (`domain=${HOST}`, `port=${PORT}`, `protocol=${PROTOCOLE}`, timeouts calculés depuis `TIMEOUT`) · `CookieManager` (`guiclass="CookiePanel"`) · `CacheManager` (`CacheManagerGui`) · `AuthManager` · `HeaderManager` (entêtes navigateur + header `atk_etape=${atk_etape}`).
+
+### Règles transverses
+- **`guiclass` exacts** (sinon `ClassNotFoundException` à l'ouverture GUI) : `CookieManager`→`CookiePanel` (**pas** `CookiePanelGUI`), `CacheManager`→`CacheManagerGui`, `CSVDataSet`→`TestBeanGUI`. En cas de doute, **copier le `guiclass` depuis le template**.
+- **Corrélation/variabilisation** : extraire tout identifiant dynamique (token, id) via `JSONPostProcessor`/`RegexExtractor` posé en **enfant** du sampler, et le **réutiliser** (path/corps/header/assertion) — jamais d'extracteur mort, jamais de valeur figée entre étapes.
+- **Pas de listeners actifs** en charge (les `View Results Tree` du template sont réservés aux tirs unitaires, désactivés).
+- **Traçabilité** : `@LIM-xxx` dans le `TestPlan.comments` (ou le nom du plan) ; le label `atk_etape` porte l'étape.
+- **Scénario depuis Jira** : dérive de la description les transactions, les étapes de chaque parcours, les fonctions communes et les colonnes du/des CSV. **Rien sur l'injection** (charge, VUs, durée) — c'est le cockpit.
+
 
 ## Commandes
 
