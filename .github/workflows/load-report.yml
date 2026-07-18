@@ -46,17 +46,17 @@ jobs:
           tar -xzf "apache-jmeter-${JMETER_VERSION}.tgz"
           JM="$PWD/apache-jmeter-${JMETER_VERSION}"
           echo "$JM/bin" >> "$GITHUB_PATH"
-          # Plugins jpgc requis pour CHARGER un plan PH : jpgc-casutg (Custom Thread Groups / UltimateThreadGroup)
-          # et jpgc-prmctl (Parameterized Controller & Set Variables Action). Ids vérifiés sur jmeter-plugins.org/repo.
-          set -x
-          wget -q -O "$JM/lib/ext/jmeter-plugins-manager.jar" \
-            "https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-manager/1.10/jmeter-plugins-manager-1.10.jar"
-          wget -q -O "$JM/lib/cmdrunner.jar" \
-            "https://repo1.maven.org/maven2/kg/apc/cmdrunner/2.3/cmdrunner-2.3.jar"
-          java -cp "$JM/lib/ext/jmeter-plugins-manager.jar" org.jmeterplugins.repository.PluginManagerCMDInstaller
-          "$JM/bin/PluginsManagerCMD.sh" install jpgc-casutg,jpgc-prmctl || echo "⚠️ install plugins jpgc échouée (lint reste valable)"
-          ls "$JM/lib/ext/" | grep -i "casutg\|prmctl\|ppc" || echo "⚠️ jars jpgc absents"
-          set +x
+          # Plugins jpgc requis pour CHARGER un plan PH (kg.apc.* : ParameterizedController, UltimateThreadGroup).
+          # Téléchargement DIRECT des JAR depuis Maven Central (le PluginsManagerCMD ne s'installe pas en headless) :
+          #   prmctl (+ deps cmn-jmeter, emulators) → ParameterizedController ; casutg → UltimateThreadGroup (au cas où).
+          M="https://repo1.maven.org/maven2/kg/apc"
+          for jar in \
+            "jmeter-plugins-cmn-jmeter/0.6/jmeter-plugins-cmn-jmeter-0.6.jar" \
+            "jmeter-plugins-emulators/0.2/jmeter-plugins-emulators-0.2.jar" \
+            "jmeter-plugins-prmctl/0.4/jmeter-plugins-prmctl-0.4.jar" \
+            "jmeter-plugins-casutg/2.10/jmeter-plugins-casutg-2.10.jar" ; do
+            wget -q -O "$JM/lib/ext/$(basename "$jar")" "$M/$jar" && echo "  ✅ $(basename "$jar")" || echo "  ⚠️ $(basename "$jar")"
+          done
 
       - name: Lint structurel des plans (convention PH)
         if: always()
@@ -74,14 +74,35 @@ jobs:
                   ET.fromstring(raw)  # XML bien formé
               except Exception as e:
                   out += [f"### ❌ {name}", f"- XML invalide : `{e}`", ""]; continue
+              # Structure JMeter : chaque élément suivi d'exactement un hashTree (jamais 2 <hashTree/> adjacents).
+              def tree_ok(root):
+                  def walk(ht):
+                      ks = list(ht); i = 0
+                      while i < len(ks):
+                          if ks[i].tag == "hashTree": return False               # hashTree en trop
+                          if i+1 >= len(ks) or ks[i+1].tag != "hashTree": return False  # élément sans hashTree
+                          if not walk(ks[i+1]): return False
+                          i += 2
+                      return True
+                  top = root.find("hashTree")
+                  return walk(top) if top is not None else False
+              struct_ok = tree_ok(ET.fromstring(raw))
+              vars_defined = set(re.findall(r'Argument.name"?\s*>([A-Za-z0-9_\-]+)<', raw)) | set(
+                  c for cs in re.findall(r'variableNames">([^<]+)<', raw) for c in cs.split(","))
+              vars_used = set(re.findall(r'\$\{([A-Za-z0-9_\-]+)\}', raw))
+              jm_builtin = {"__P","__jexl3","__groovy","__V","__time","__eval","JMeterThread"}
+              undef = sorted(v for v in vars_used - vars_defined
+                             if not any(b in v for b in jm_builtin) and not v.startswith("__"))
               checks = [
                   ("XML bien formé", True),
+                  ("Structure JMeter valide (paires élément/hashTree)", struct_ok),
                   ("Fragment TRANSACTIONS", 'testname="TRANSACTIONS"' in raw),
                   ("Fragment FONCTIONS", 'testname="FONCTIONS"' in raw),
                   ("Blocs UDV paramétrés (${__P})", "UDV_" in raw and "__P(" in raw),
                   ("JDD login,pass référencé", "login,pass" in raw or "${CSV-TR" in raw),
                   ("Nommage TRxx_ présent", bool(re.search(r'TR0?\d', raw))),
                   ("guiclass CookiePanel (pas ...GUI)", "CookiePanelGUI" not in raw),
+                  ("Variables toutes définies" + (f" (indéfinies: {undef[:5]})" if undef else ""), not undef),
                   ("Aucune injection ACTIVE (UltimateThreadGroup)",
                      not re.search(r'UltimateThreadGroup[^>]*enabled="[Tt]rue"', raw)),
               ]
@@ -107,7 +128,7 @@ jobs:
       - name: Tir unitaire des transactions (best-effort, 1 VU)
         if: always()
         run: |
-          mkdir -p load-results
+          mkdir -p load-results work/data
           for plan in load/*.jmx; do
             [ -e "$plan" ] || continue
             name=$(basename "$plan" .jmx)
@@ -123,7 +144,7 @@ jobs:
           print("unit plan:", dst)
           PY
             echo "▶ tir unitaire $name (host=$HOST, 1 VU)"
-            jmeter -n -t "$unit" -Jhost="$HOST" -Jprojet="${name}" \
+            jmeter -n -t "$unit" -Jhost="$HOST" -Jprojet="${name}" -Jwork="$PWD/work" \
               -Jjmeter.save.saveservice.print_field_names=true \
               -l "load-results/${name}.jtl" -j "load-results/${name}.log" || true
           done
