@@ -54,6 +54,15 @@ Tags utiles : `@smoke`, `@regression`, `@JIRA-xxx`.
 
 - **Base URL** : `RENTAL_APP_BASE_URL` (Render). ⚠️ Free tier : **DB SQLite vide au démarrage et éphémère** (reset au redeploy/spin-down après 15 min). → Les tests **créent leurs propres données** (inscription via `/register`) ; pas de compte préexistant. Prévoir un **warm-up** (1er GET) + timeouts généreux contre le cold start.
 - **Routes** : `/` (accueil + recherche), `/register`, `/login`, `/create` (protégée), `/listing/[id]`, `/my-listings` (protégée).
+- **API (endpoints — sert à traduire un parcours métier en appels HTTP, ex. tests de charge)** :
+  - `POST /api/auth/register` `{name,email,phone?,password,confirmPassword}` → **201** (crée un compte).
+  - `POST /api/auth/login` `{email,password}` → **200** ; pose le cookie JWT httpOnly `token` (`Set-Cookie`) ; corps `{ user: { id, name, email, … } }`.
+  - `GET /api/auth/me` → **200** `{ user: {…} }` (session courante ; nécessite le cookie).
+  - `POST /api/auth/logout` → **200/204** (déconnexion).
+  - `GET /api/listings` → **200** `{ "listings": [ … ] }` ; filtrage recherche `?city=<ville>` (autres filtres possibles : `type`, `minPrice`, `maxPrice`).
+  - `GET /api/listings/<id>` → **200** (détail d'une annonce).
+  - `POST /api/listings` `{title,description,type("apartment"|"house"),price,city,address,rooms,surface,furnished}` → **201** (dépôt, authentifié) ; corps = l'annonce créée (avec `id`).
+  - Mapping métier : « se connecter » = `POST /api/auth/login` ; « rechercher » = `GET /api/listings?city=` ; « consulter une annonce » = `GET /api/listings/<id>` ; « déposer une annonce » = `POST /api/listings` ; « se déconnecter » = `POST /api/auth/logout`.
 - **Sélecteurs réels** (validés) :
   - Login : `getByRole('textbox', { name: 'Email' })`, `getByRole('textbox', { name: 'Mot de passe', exact: true })`, `getByRole('button', { name: 'Se connecter' })`.
   - Register : `Nom complet`, `Email`, `Téléphone (optionnel)`, `Mot de passe` (**exact:true**), `Confirmer le mot de passe`, bouton `S'inscrire`.
