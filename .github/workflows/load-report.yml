@@ -88,7 +88,10 @@ jobs:
                   return walk(top) if top is not None else False
               struct_ok = tree_ok(ET.fromstring(raw))
               vars_defined = set(re.findall(r'Argument.name"?\s*>([A-Za-z0-9_\-]+)<', raw)) | set(
-                  c for cs in re.findall(r'variableNames">([^<]+)<', raw) for c in cs.split(","))
+                  c.strip() for cs in re.findall(r'variableNames">([^<]+)<', raw) for c in cs.split(",")) \
+                  | set(re.findall(r'referenceNames">([A-Za-z0-9_\-]+)<', raw)) \
+                  | set(re.findall(r'refname">([A-Za-z0-9_\-]+)<', raw)) \
+                  | set(re.findall(r'vars\.put\(\s*["\x27]([A-Za-z0-9_\-]+)', raw))
               vars_used = set(re.findall(r'\$\{([A-Za-z0-9_\-]+)\}', raw))
               jm_builtin = {"__P","__jexl3","__groovy","__V","__time","__eval","JMeterThread"}
               undef = sorted(v for v in vars_used - vars_defined
@@ -129,6 +132,9 @@ jobs:
         if: always()
         run: |
           mkdir -p load-results work/data
+          # Les plans unitaires sont écrits dans load-results/ : on y copie data/ pour que les
+          # chemins CSV relatifs (data/xxx.csv) résolvent comme depuis load/.
+          cp -r load/data load-results/ 2>/dev/null || true
           for plan in load/*.jmx; do
             [ -e "$plan" ] || continue
             name=$(basename "$plan" .jmx)
@@ -171,7 +177,6 @@ jobs:
               status = "✅" if ok == n else "⚠️"
               out += [f"### {status} {name}",
                       f"- Échantillons : **{n}** · OK : **{ok}/{n}** · latence moy. : **{avg} ms**", ""]
-          open("/tmp/lint.md", "a").write("\n".join(out))
           print("\n".join(out))
           PY
 
