@@ -46,15 +46,17 @@ jobs:
           tar -xzf "apache-jmeter-${JMETER_VERSION}.tgz"
           JM="$PWD/apache-jmeter-${JMETER_VERSION}"
           echo "$JM/bin" >> "$GITHUB_PATH"
-          # Plugins Manager + jeux jpgc utilisés par le template PH (UltimateThreadGroup, ParameterizedController).
-          # Best-effort : si l'install échoue, le lint reste valable et le tir unitaire dégrade proprement.
-          ( wget -q -O "$JM/lib/ext/jmeter-plugins-manager.jar" \
-              "https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-manager/1.10/jmeter-plugins-manager-1.10.jar" \
-            && wget -q -O "$JM/lib/cmdrunner.jar" \
-              "https://repo1.maven.org/maven2/kg/apc/cmdrunner/2.3/cmdrunner-2.3.jar" \
-            && java -cp "$JM/lib/ext/jmeter-plugins-manager.jar" \
-              org.jmeterplugins.repository.PluginManagerCMDInstaller \
-            && "$JM/bin/PluginsManagerCMD.sh" install jpgc-casutg,jpgc-ppc ) || echo "⚠️ plugins jpgc non installés (tir unitaire best-effort)"
+          # Plugins jpgc requis pour CHARGER un plan PH : jpgc-casutg (Custom Thread Groups / UltimateThreadGroup)
+          # et jpgc-prmctl (Parameterized Controller & Set Variables Action). Ids vérifiés sur jmeter-plugins.org/repo.
+          set -x
+          wget -q -O "$JM/lib/ext/jmeter-plugins-manager.jar" \
+            "https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-manager/1.10/jmeter-plugins-manager-1.10.jar"
+          wget -q -O "$JM/lib/cmdrunner.jar" \
+            "https://repo1.maven.org/maven2/kg/apc/cmdrunner/2.3/cmdrunner-2.3.jar"
+          java -cp "$JM/lib/ext/jmeter-plugins-manager.jar" org.jmeterplugins.repository.PluginManagerCMDInstaller
+          "$JM/bin/PluginsManagerCMD.sh" install jpgc-casutg,jpgc-prmctl || echo "⚠️ install plugins jpgc échouée (lint reste valable)"
+          ls "$JM/lib/ext/" | grep -i "casutg\|prmctl\|ppc" || echo "⚠️ jars jpgc absents"
+          set +x
 
       - name: Lint structurel des plans (convention PH)
         if: always()

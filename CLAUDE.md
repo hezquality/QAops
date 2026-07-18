@@ -148,6 +148,7 @@ TestPlan  <PROJET>_Web_Workload
 - **Pas de listeners actifs** en charge (les `View Results Tree` du template sont réservés aux tirs unitaires, désactivés).
 - **Traçabilité** : `@LIM-xxx` dans le `TestPlan.comments` (ou le nom du plan) ; le label `atk_etape` porte l'étape.
 - **Scénario depuis Jira** : dérive de la description les transactions, les étapes de chaque parcours, les fonctions communes et les colonnes du/des CSV. **Rien sur l'injection** (charge, VUs, durée) — c'est le cockpit.
+- **Cohérence STRICTE des noms de variables** : toute variable `${X}` utilisée doit être **définie à l'identique** — dans un bloc `UDV_*`, une colonne de CSV, ou extraite en amont. ⚠️ Piège classique : définir `CSV-TR01` puis écrire `${CSV-TR1}` (zéro manquant) → JMeter **n'échoue pas**, il laisse le littéral non résolu (`data/${CSV-TR1}`) → fichier/URL cassé, **silencieux en non-GUI**. Après génération, **relis chaque `${...}` et vérifie qu'il correspond exactement à une définition** (mêmes casse, tirets, zéros).
 
 
 ## Commandes
