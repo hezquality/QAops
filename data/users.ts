@@ -36,3 +36,11 @@ export const invalidCredentials = [
   { label: 'mauvais mot de passe', email: demoUser.email, password: 'wrong-password' },
   { label: 'email inconnu', email: 'nobody@locimmo.test', password: 'whatever' },
 ];
+
+/**
+ * Jeux de données data-driven (LIM-11 — déconnexion) : compte locataire / compte bailleur.
+ * L'inscription LocImmo n'a pas de champ de rôle (un compte peut à la fois chercher et
+ * déposer une annonce) : les deux jeux passent par le même flux, seul le libellé varie
+ * pour couvrir explicitement les deux profils demandés par le scénario Jira.
+ */
+export const logoutAccountLabels = ['compte locataire', 'compte bailleur'] as const;
