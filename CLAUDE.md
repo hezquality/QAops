@@ -64,7 +64,7 @@ Tags utiles : `@smoke`, `@regression`, `@JIRA-xxx`.
   - `POST /api/listings` `{title,description,type("apartment"|"house"),price,city,address,rooms,surface,furnished}` → **201** (dépôt, authentifié) ; corps = l'annonce créée (avec `id`).
   - Mapping métier : « se connecter » = `POST /api/auth/login` ; « rechercher » = `GET /api/listings?city=` ; « consulter une annonce » = `GET /api/listings/<id>` ; « déposer une annonce » = `POST /api/listings` ; « se déconnecter » = `POST /api/auth/logout`.
 - **Sélecteurs réels** (validés) :
-  - Login : `getByRole('textbox', { name: 'Email' })`, `getByRole('textbox', { name: 'Mot de passe', exact: true })`, `getByRole('button', { name: 'Se connecter' })`.
+  - Login : `getByRole('textbox', { name: 'Email' })`, `getByRole('textbox', { name: 'Mot de passe', exact: true })`, `getByRole('button', { name: 'Se connecter', exact: true })`. ⚠️ **`exact: true` obligatoire** sur le bouton : la page a aussi un bouton `→ Se connecter avec le compte démo` qui matcherait sinon (strict mode violation).
   - Register : `Nom complet`, `Email`, `Téléphone (optionnel)`, `Mot de passe` (**exact:true**), `Confirmer le mot de passe`, bouton `S'inscrire`.
   - Navbar connecté : texte `Bonjour, <nom>` + bouton `Déconnexion` + liens `Déposer une annonce`/`Mes annonces`.
 - **Erreur de login** : `getByText('Email ou mot de passe incorrect')` — ⚠️ c'est un **`<div>` texte**, PAS un `role=alert` (l'alert de la page est un conteneur vide). Proposer `data-testid="form-error"` côté app.
