@@ -1,0 +1,1534 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.4.3">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="locimmo_Web_Workload" enabled="true">
+      <stringProp name="TestPlan.comments">@LIM-6 Test de charge - parcours locataire (recherche) et bailleur (publication d'annonce) - LocImmo</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+    </TestPlan>
+    <hashTree>
+    <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="UDV_Tir" enabled="true">
+        <collectionProp name="Arguments.arguments" >
+          <elementProp name="TIR" elementType="Argument">
+            <stringProp name="Argument.name" >TIR</stringProp>
+            <stringProp name="Argument.value" >${__P(tir,1)}</stringProp>
+            <stringProp name="Argument.metadata" >=</stringProp>
+            <stringProp name="Argument.desc" >Numero du tir associe au workload </stringProp>
+          </elementProp>
+          <elementProp name="TYPE" elementType="Argument">
+            <stringProp name="Argument.name" >TYPE</stringProp>
+            <stringProp name="Argument.value" >${__P(type,Performance)}</stringProp>
+            <stringProp name="Argument.metadata" >=</stringProp>
+            <stringProp name="Argument.desc" >unitaire, qualif, performance, endurance, stress</stringProp>
+          </elementProp>
+          <elementProp name="CONTINUE_ONERROR" elementType="Argument">
+            <stringProp name="Argument.name" >CONTINUE_ONERROR</stringProp>
+            <stringProp name="Argument.value" >${__P(Continue,false)}</stringProp>
+            <stringProp name="Argument.metadata" >=</stringProp>
+            <stringProp name="Argument.desc" >Poursuite d execution des etapes en cas d echec</stringProp>
+          </elementProp>
+          <elementProp name="TIMEOUT" elementType="Argument">
+            <stringProp name="Argument.name" >TIMEOUT</stringProp>
+            <stringProp name="Argument.value" >${__P(Timeout,60000)}</stringProp>
+            <stringProp name="Argument.metadata" >=</stringProp>
+            <stringProp name="Argument.desc" >Timeout des connexions HTTP  1/3 connexion, 2/3 response</stringProp>
+          </elementProp>
+          <elementProp name="HTTPPOOL" elementType="Argument">
+            <stringProp name="Argument.name" >HTTPPOOL</stringProp>
+            <stringProp name="Argument.value" >${__P(HttpPool,6)}</stringProp>
+            <stringProp name="Argument.metadata" >=</stringProp>
+            <stringProp name="Argument.desc" >Pool de connexions HTTP  6 pour la plupart des navigateurs</stringProp>
+          </elementProp>
+          <elementProp name="WORK" elementType="Argument">
+            <stringProp name="Argument.name">WORK</stringProp>
+            <stringProp name="Argument.value">${__P(work,./work)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">variable pour rep travail dans les scripts groovy</stringProp>
+          </elementProp>
+          <elementProp name="HOME" elementType="Argument">
+            <stringProp name="Argument.name">HOME</stringProp>
+            <stringProp name="Argument.value">${__P(home,.)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc"></stringProp>
+          </elementProp>
+         </collectionProp>
+        <stringProp name="TestPlan.comments" >Valeurs parametrees du tir</stringProp>
+    </Arguments>
+      <hashTree/>
+    <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="UDV_Projet" enabled="true">
+        <collectionProp name="Arguments.arguments" >
+          <elementProp name="PROJET" elementType="Argument">
+              <stringProp name="Argument.name">PROJET</stringProp>
+              <stringProp name="Argument.value">${__P(projet,locimmo)}</stringProp>
+              <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="HOST" elementType="Argument">
+            <stringProp name="Argument.name" >HOST</stringProp>
+            <stringProp name="Argument.value" >${__P(host,locimmo.onrender.com)}</stringProp>
+            <stringProp name="Argument.metadata" >=</stringProp>
+              </elementProp>
+          <elementProp name="PORT" elementType="Argument">
+            <stringProp name="Argument.name" >PORT</stringProp>
+            <stringProp name="Argument.value" >${__P(port,443)}</stringProp>
+            <stringProp name="Argument.metadata" >=</stringProp>
+              </elementProp>
+          <elementProp name="PROTOCOLE" elementType="Argument">
+            <stringProp name="Argument.name" >PROTOCOLE</stringProp>
+            <stringProp name="Argument.value" >${__P(protocole,https)}</stringProp>
+            <stringProp name="Argument.metadata" >=</stringProp>
+           </elementProp>
+        </collectionProp>
+    </Arguments>
+      <hashTree/>
+    <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="UDV_TransactionsEtapes" enabled="True">
+        <collectionProp name="Arguments.arguments" >
+                    <elementProp name="NBE_TR01" elementType="Argument">
+            <stringProp name="Argument.name">NBE_TR01</stringProp>
+            <stringProp name="Argument.value">${__P(nbeTR01,5)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">Nombre d etapes dans la transaction</stringProp>
+          </elementProp>
+          <elementProp name="NBE_TR02" elementType="Argument">
+            <stringProp name="Argument.name">NBE_TR02</stringProp>
+            <stringProp name="Argument.value">${__P(nbeTR02,5)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">Nombre d etapes dans la transaction</stringProp>
+          </elementProp>
+        </collectionProp>
+        <stringProp name="TestPlan.comments" >Nombre d etapes</stringProp>
+    </Arguments>
+      <hashTree/>
+    <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="UDV_TransactionsDurees" enabled="True">
+        <collectionProp name="Arguments.arguments" >
+                    <elementProp name="DUREE_TR01" elementType="Argument">
+            <stringProp name="Argument.name">DUREE_TR01</stringProp>
+            <stringProp name="Argument.value">${__P(dureeTR01,60000)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">duree normalisee de la transaction (hors unitaire)</stringProp>
+          </elementProp>
+          <elementProp name="DUREE_TR01_MIN" elementType="Argument">
+            <stringProp name="Argument.name">DUREE_TR01_MIN</stringProp>
+            <stringProp name="Argument.value">${__jexl3(${NBE_TR01}*1000)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">duree de la transaction sans pause</stringProp>
+          </elementProp>
+          <elementProp name="DUREE_TR02" elementType="Argument">
+            <stringProp name="Argument.name">DUREE_TR02</stringProp>
+            <stringProp name="Argument.value">${__P(dureeTR02,60000)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">duree normalisee de la transaction (hors unitaire)</stringProp>
+          </elementProp>
+          <elementProp name="DUREE_TR02_MIN" elementType="Argument">
+            <stringProp name="Argument.name">DUREE_TR02_MIN</stringProp>
+            <stringProp name="Argument.value">${__jexl3(${NBE_TR02}*1000)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">duree de la transaction sans pause</stringProp>
+          </elementProp>
+        </collectionProp>
+        <stringProp name="TestPlan.comments" >Duree des transactions</stringProp>
+    </Arguments>
+      <hashTree/>
+    <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="UDV_TransactionsFichiers" enabled="True">
+        <collectionProp name="Arguments.arguments" >
+                    <elementProp name="CSV-TR01" elementType="Argument">
+            <stringProp name="Argument.name" >CSV-TR01</stringProp>
+            <stringProp name="Argument.value" >${PROJET}-TR01.csv</stringProp>
+            <stringProp name="Argument.metadata" >=</stringProp>
+          </elementProp>
+          <elementProp name="CSV-TR02" elementType="Argument">
+            <stringProp name="Argument.name" >CSV-TR02</stringProp>
+            <stringProp name="Argument.value" >${PROJET}-TR02.csv</stringProp>
+            <stringProp name="Argument.metadata" >=</stringProp>
+          </elementProp>
+        </collectionProp>
+        <stringProp name="TestPlan.comments" >Fichiers des transactions</stringProp>
+    </Arguments>
+      <hashTree/>
+<Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="UDV_Interne" enabled="True">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="FERR" elementType="Argument">
+            <stringProp name="Argument.name">FERR</stringProp>
+            <stringProp name="Argument.value">${PROJET}-${TYPE}-${TIR}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="atk_etape" elementType="Argument">
+            <stringProp name="Argument.name">atk_etape</stringProp>
+            <stringProp name="Argument.value">${__V(atk_etape,)}</stringProp>
+            <stringProp name= "Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+        <stringProp name="TestPlan.comments">Variables internes</stringProp>
+    </Arguments>
+      <hashTree/>
+      <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP Request Defaults" enabled="true">
+        <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+          <collectionProp name="Arguments.arguments"/>
+        </elementProp>
+        <stringProp name="HTTPSampler.domain">${HOST}</stringProp>
+        <stringProp name="HTTPSampler.port">${PORT}</stringProp>
+        <stringProp name="HTTPSampler.protocol">${PROTOCOLE}</stringProp>
+        <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+        <stringProp name="HTTPSampler.path">/</stringProp>
+        <stringProp name="HTTPSampler.concurrentPool">${__P(HTTPConcurrentPool,${HTTPPOOL})}</stringProp>
+        <stringProp name="HTTPSampler.connect_timeout">${__jexl3(${__eval(${TIMEOUT}/3)})}</stringProp>
+        <stringProp name="HTTPSampler.response_timeout">${__jexl3(${__eval(2*${TIMEOUT}/3)})}</stringProp>
+      </ConfigTestElement>
+      <hashTree/>
+      <CookieManager guiclass="CookiePanel" testclass="CookieManager" testname="HTTP Cookie Manager" enabled="true">
+        <collectionProp name="CookieManager.cookies"/>
+        <boolProp name="CookieManager.clearEachIteration">true</boolProp>
+      </CookieManager>
+      <hashTree/>
+      <AuthManager guiclass="AuthPanel" testclass="AuthManager" testname="HTTP Authorization Manager" enabled="True">
+        <collectionProp name="AuthManager.auth_list">
+        </collectionProp>
+        <boolProp name="AuthManager.controlledByThreadGroup">False</boolProp>
+      </AuthManager>
+      <hashTree/>
+      <CacheManager guiclass="CacheManagerGui" testclass="CacheManager" testname="Gestionnaire de cache HTTP" enabled="true">
+        <boolProp name="clearEachIteration">true</boolProp>
+        <boolProp name="useExpires">false</boolProp>
+      </CacheManager>
+      <hashTree/>
+      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Gestionnaire d&apos;entêtes HTTP" enabled="true">
+        <collectionProp name="HeaderManager.headers">
+          <elementProp name="Accept-Language" elementType="Header">
+            <stringProp name="Header.name">Accept-Language</stringProp>
+            <stringProp name="Header.value">fr,fr-FR;q=0.8,en-US;q=0.5,en;q=0.3</stringProp>
+          </elementProp>
+          <elementProp name="Upgrade-Insecure-Requests" elementType="Header">
+            <stringProp name="Header.name">Upgrade-Insecure-Requests</stringProp>
+            <stringProp name="Header.value">1</stringProp>
+          </elementProp>
+          <elementProp name="Accept-Encoding" elementType="Header">
+            <stringProp name="Header.name">Accept-Encoding</stringProp>
+            <stringProp name="Header.value">gzip, deflate</stringProp>
+          </elementProp>
+          <elementProp name="User-Agent" elementType="Header">
+            <stringProp name="Header.name">User-Agent</stringProp>
+            <stringProp name="Header.value">Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv57.0) Gecko/20100101 Firefox/57.0</stringProp>
+          </elementProp>
+          <elementProp name="Accept" elementType="Header">
+            <stringProp name="Header.name">Accept</stringProp>
+            <stringProp name="Header.value">text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8</stringProp>
+          </elementProp>
+          <elementProp name="" elementType="Header">
+            <stringProp name="Header.name">atk_etape</stringProp>
+            <stringProp name="Header.value">${atk_etape}</stringProp>
+          </elementProp>
+        </collectionProp>
+      </HeaderManager>
+      <hashTree/>
+
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Tests TR01" enabled="false">
+        <stringProp name="ThreadGroup.on_sample_error">Continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="TR01_locataire" enabled="true">
+          <collectionProp name="ModuleController.node_path">
+            <stringProp name="764597751">Test Plan</stringProp>
+            <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+            <stringProp name="218173123">TRANSACTIONS</stringProp>
+            <stringProp name="-1812909823">TR01_locataire</stringProp>
+          </collectionProp>
+        </ModuleController>
+        <hashTree/>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Tests TR02" enabled="false">
+        <stringProp name="ThreadGroup.on_sample_error">Continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="TR02_bailleur" enabled="true">
+          <collectionProp name="ModuleController.node_path">
+            <stringProp name="764597751">Test Plan</stringProp>
+            <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+            <stringProp name="218173123">TRANSACTIONS</stringProp>
+            <stringProp name="-1812909823">TR02_bailleur</stringProp>
+          </collectionProp>
+        </ModuleController>
+        <hashTree/>
+      </hashTree>
+<TestFragmentController guiclass="TestFragmentControllerGui" testclass="TestFragmentController" testname="FONCTIONS_INTERNES" enabled="false"/>
+      <hashTree>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="ErrorLog" enabled="true"/>
+        <hashTree>
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="#ErrorLog" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">import org.apache.jmeter.services.FileServer
+import  java.io.File
+import  java.io.Writer
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+LocalDateTime Date = LocalDateTime.now()
+DateTimeFormatter formatter = DateTimeFormatter.ofPattern(&quot;yyyy/MM/dd HH:mm:ss.SSS&quot;)
+String timestamp = Date.format(formatter)
+Long iter= vars.getIteration()
+Integer thrnum = ctx.getThreadNum()+1
+String url = prev.getUrlAsString()
+String code = prev.getResponseCode()
+String message = prev.getResponseMessage()
+String failure = prev.getFirstAssertionFailureMessage()
+String data = prev.getResponseDataAsString()
+String file = vars.get(&quot;WORK&quot;)+&quot;/data/&quot;+ vars.get(&quot;FERR&quot;)
+String gp = vars.get(&quot;GP&quot;)
+Long nT = ctx.getThreadGroup().getNumThreads()
+String gpName = ctx.getThreadGroup().getName()
+Long cpt = (iter -1)*nT+thrnum
+String line = timestamp + &apos;,&apos; +gpName+ &apos;,&apos;+ cpt + &apos;,&apos;+ &apos;${param}&apos; +  &apos;,&apos; + url + &apos;,&apos; + code + &apos;,&apos; + message + &apos;,&apos; + failure +  &apos;\n&apos;
+BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file+&quot;-&quot;+gp+&quot;_errors.csv&quot;, true), &quot;UTF-8&quot;))
+out.write(line)
+out.close()
+line = timestamp + &apos;--------- &apos;+gpName +&apos; iteration:&apos; + cpt.toString() + &apos; param:&apos; +  &apos;${param}&apos; + &apos; ----------\n&apos;
+BufferedWriter outData = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file+&quot;-&quot;+gp+&quot;_errors.data&quot;, true), &quot;UTF-8&quot;))
+outData.write(line)
+outData.write(data+&apos;\n&apos;)
+outData.close()
+SampleResult.setSuccessful(false)
+                    </stringProp>
+          </JSR223Sampler>
+          <hashTree/>
+        </hashTree>
+     <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="StartTrFiles" enabled="true"/>
+        <hashTree>
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="#StartTrFiles" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">import org.apache.jmeter.services.FileServer
+import java.io.FileWriter
+import java.io.File
+import java.nio.charset.StandardCharsets
+if (&apos;${gp}&apos;!=&apos;TRXX&apos;) {
+	def duration = System.currentTimeMillis().toString()
+	var fileName = vars.get(&quot;WORK&quot;)+&quot;/data/&quot;+ vars.get(&quot;FERR&quot;)
+	def filePath = fileName+&quot;-&quot;+&apos;${gp}&apos;+&quot;_errors.csv&quot;
+	def file = new File(filePath)
+	if (!file.exists()) {
+		String title =&quot;timestamp,threadgroup,cpt,data,url,code,message,failure\n&quot;
+		try  (var errorFile = new FileWriter(fileName+&quot;-&quot;+&apos;${gp}&apos;+&quot;_errors.csv&quot;, StandardCharsets.UTF_8)) { errorFile.write(title)}
+		try  (var dataFile = new FileWriter(fileName+&quot;-&quot;+&apos;${gp}&apos;+&quot;_errors.data&quot;, StandardCharsets.UTF_8)) { dataFile.write(&quot;&quot;)}
+	}
+}
+			 </stringProp>
+          </JSR223Sampler>
+          <hashTree/>
+        </hashTree>
+     </hashTree>
+   
+   <TestFragmentController guiclass="TestFragmentControllerGui" testclass="TestFragmentController" testname="FONCTIONS" enabled="false"/>
+   <hashTree>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="accueil" enabled="true"/>
+     <hashTree>
+      <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="accueil-0001" enabled="true">
+        <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" enabled="true">
+          <collectionProp name="Arguments.arguments"/>
+        </elementProp>
+        <stringProp name="HTTPSampler.domain">${HOST}</stringProp>
+        <stringProp name="HTTPSampler.port">${PORT}</stringProp>
+        <stringProp name="HTTPSampler.protocol">${PROTOCOLE}</stringProp>
+        <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+        <stringProp name="HTTPSampler.path">/</stringProp>
+        <stringProp name="HTTPSampler.method">GET</stringProp>
+        <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+        <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+        <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+        <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+        <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+        <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+        <stringProp name="HTTPSampler.response_timeout"></stringProp>
+      </HTTPSamplerProxy>
+        <hashTree/>
+     </hashTree>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="connexion" enabled="true"/>
+     <hashTree>
+      <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="connexion-0001" enabled="true">
+        <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+        <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" enabled="true">
+          <collectionProp name="Arguments.arguments">
+            <elementProp name="" elementType="HTTPArgument">
+              <boolProp name="HTTPArgument.always_encode">false</boolProp>
+              <stringProp name="Argument.value">{"email":"${login}","password":"${pass}"}</stringProp>
+              <stringProp name="Argument.metadata">=</stringProp>
+            </elementProp>
+          </collectionProp>
+        </elementProp>
+        <stringProp name="HTTPSampler.domain">${HOST}</stringProp>
+        <stringProp name="HTTPSampler.port">${PORT}</stringProp>
+        <stringProp name="HTTPSampler.protocol">${PROTOCOLE}</stringProp>
+        <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+        <stringProp name="HTTPSampler.path">/api/auth/login</stringProp>
+        <stringProp name="HTTPSampler.method">POST</stringProp>
+        <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+        <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+        <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+        <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+        <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+        <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+        <stringProp name="HTTPSampler.response_timeout"></stringProp>
+      </HTTPSamplerProxy>
+      <hashTree>
+        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Content-Type JSON" enabled="true">
+          <collectionProp name="HeaderManager.headers">
+            <elementProp name="Content-Type" elementType="Header">
+              <stringProp name="Header.name">Content-Type</stringProp>
+              <stringProp name="Header.value">application/json</stringProp>
+            </elementProp>
+          </collectionProp>
+        </HeaderManager>
+        <hashTree/>
+      </hashTree>
+     </hashTree>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="recherche" enabled="true"/>
+     <hashTree>
+      <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="recherche-0001" enabled="true">
+        <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" enabled="true">
+          <collectionProp name="Arguments.arguments">
+            <elementProp name="city" elementType="HTTPArgument">
+              <boolProp name="HTTPArgument.always_encode">false</boolProp>
+              <stringProp name="Argument.value">${ville}</stringProp>
+              <stringProp name="Argument.metadata">=</stringProp>
+              <boolProp name="HTTPArgument.use_equals">true</boolProp>
+              <stringProp name="Argument.name">city</stringProp>
+            </elementProp>
+          </collectionProp>
+        </elementProp>
+        <stringProp name="HTTPSampler.domain">${HOST}</stringProp>
+        <stringProp name="HTTPSampler.port">${PORT}</stringProp>
+        <stringProp name="HTTPSampler.protocol">${PROTOCOLE}</stringProp>
+        <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+        <stringProp name="HTTPSampler.path">/api/listings</stringProp>
+        <stringProp name="HTTPSampler.method">GET</stringProp>
+        <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+        <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+        <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+        <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+        <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+        <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+        <stringProp name="HTTPSampler.response_timeout"></stringProp>
+      </HTTPSamplerProxy>
+      <hashTree>
+        <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract listingId" enabled="true">
+          <stringProp name="JSONPostProcessor.referenceNames">listingId</stringProp>
+          <stringProp name="JSONPostProcessor.jsonPathExprs">$.listings[0].id</stringProp>
+          <stringProp name="JSONPostProcessor.match_numbers">1</stringProp>
+          <stringProp name="JSONPostProcessor.defaultValues">NOT_FOUND</stringProp>
+        </JSONPostProcessor>
+        <hashTree/>
+      </hashTree>
+     </hashTree>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="consulter_annonce" enabled="true"/>
+     <hashTree>
+      <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="consulter_annonce-0001" enabled="true">
+        <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" enabled="true">
+          <collectionProp name="Arguments.arguments"/>
+        </elementProp>
+        <stringProp name="HTTPSampler.domain">${HOST}</stringProp>
+        <stringProp name="HTTPSampler.port">${PORT}</stringProp>
+        <stringProp name="HTTPSampler.protocol">${PROTOCOLE}</stringProp>
+        <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+        <stringProp name="HTTPSampler.path">/api/listings/${listingId}</stringProp>
+        <stringProp name="HTTPSampler.method">GET</stringProp>
+        <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+        <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+        <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+        <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+        <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+        <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+        <stringProp name="HTTPSampler.response_timeout"></stringProp>
+      </HTTPSamplerProxy>
+        <hashTree/>
+     </hashTree>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="deconnexion" enabled="true"/>
+     <hashTree>
+      <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="deconnexion-0001" enabled="true">
+        <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+        <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" enabled="true">
+          <collectionProp name="Arguments.arguments">
+            <elementProp name="" elementType="HTTPArgument">
+              <boolProp name="HTTPArgument.always_encode">false</boolProp>
+              <stringProp name="Argument.value">{}</stringProp>
+              <stringProp name="Argument.metadata">=</stringProp>
+            </elementProp>
+          </collectionProp>
+        </elementProp>
+        <stringProp name="HTTPSampler.domain">${HOST}</stringProp>
+        <stringProp name="HTTPSampler.port">${PORT}</stringProp>
+        <stringProp name="HTTPSampler.protocol">${PROTOCOLE}</stringProp>
+        <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+        <stringProp name="HTTPSampler.path">/api/auth/logout</stringProp>
+        <stringProp name="HTTPSampler.method">POST</stringProp>
+        <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+        <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+        <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+        <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+        <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+        <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+        <stringProp name="HTTPSampler.response_timeout"></stringProp>
+      </HTTPSamplerProxy>
+      <hashTree>
+        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Content-Type JSON" enabled="true">
+          <collectionProp name="HeaderManager.headers">
+            <elementProp name="Content-Type" elementType="Header">
+              <stringProp name="Header.name">Content-Type</stringProp>
+              <stringProp name="Header.value">application/json</stringProp>
+            </elementProp>
+          </collectionProp>
+        </HeaderManager>
+        <hashTree/>
+      </hashTree>
+     </hashTree>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="depot_annonce" enabled="true"/>
+     <hashTree>
+      <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="depot_annonce-0001" enabled="true">
+        <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+        <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" enabled="true">
+          <collectionProp name="Arguments.arguments">
+            <elementProp name="" elementType="HTTPArgument">
+              <boolProp name="HTTPArgument.always_encode">false</boolProp>
+              <stringProp name="Argument.value">{"title":"Appartement LIM-6 ${__time()}","description":"Annonce generee par test de charge LIM-6 (bailleur)","type":"apartment","price":950,"city":"${ville}","address":"1 rue du Test","rooms":3,"surface":55,"furnished":true}</stringProp>
+              <stringProp name="Argument.metadata">=</stringProp>
+            </elementProp>
+          </collectionProp>
+        </elementProp>
+        <stringProp name="HTTPSampler.domain">${HOST}</stringProp>
+        <stringProp name="HTTPSampler.port">${PORT}</stringProp>
+        <stringProp name="HTTPSampler.protocol">${PROTOCOLE}</stringProp>
+        <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+        <stringProp name="HTTPSampler.path">/api/listings</stringProp>
+        <stringProp name="HTTPSampler.method">POST</stringProp>
+        <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+        <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+        <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+        <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+        <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+        <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+        <stringProp name="HTTPSampler.response_timeout"></stringProp>
+      </HTTPSamplerProxy>
+      <hashTree>
+        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Content-Type JSON" enabled="true">
+          <collectionProp name="HeaderManager.headers">
+            <elementProp name="Content-Type" elementType="Header">
+              <stringProp name="Header.name">Content-Type</stringProp>
+              <stringProp name="Header.value">application/json</stringProp>
+            </elementProp>
+          </collectionProp>
+        </HeaderManager>
+        <hashTree/>
+        <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract listingId" enabled="true">
+          <stringProp name="JSONPostProcessor.referenceNames">listingId</stringProp>
+          <stringProp name="JSONPostProcessor.jsonPathExprs">$.id</stringProp>
+          <stringProp name="JSONPostProcessor.match_numbers">1</stringProp>
+          <stringProp name="JSONPostProcessor.defaultValues">NOT_FOUND</stringProp>
+        </JSONPostProcessor>
+        <hashTree/>
+      </hashTree>
+     </hashTree>
+   </hashTree>
+    <TestFragmentController guiclass="TestFragmentControllerGui" testclass="TestFragmentController" testname="TRANSACTIONS" enabled="false"/>
+    <hashTree>
+        <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="TR01_locataire" enabled="true">
+          <boolProp name="TransactionController.parent">False</boolProp>
+          <boolProp name="TransactionController.includeTimers">False</boolProp>
+        </TransactionController>
+        <hashTree>
+        <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="TR1 File Config" enabled="true">
+          <stringProp name="delimiter">,</stringProp>
+          <stringProp name="fileEncoding">utf8</stringProp>
+          <stringProp name="filename">data/${CSV-TR01}</stringProp>
+          <boolProp name="quotedData">True</boolProp>
+          <boolProp name="recycle">True</boolProp>
+          <stringProp name="shareMode">shareMode.group</stringProp>
+          <boolProp name="stopThread">False</boolProp>
+          <stringProp name="variableNames">login,pass,ville</stringProp>
+          <boolProp name="ignoreFirstLine">True</boolProp>
+        </CSVDataSet>
+        <hashTree/>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="_StartTr" enabled="true"/>
+        <hashTree>
+          <TestAction guiclass="TestActionGui" testclass="TestAction" testname="_InitTr" enabled="true">
+            <intProp name="ActionProcessor.action">1</intProp>
+            <intProp name="ActionProcessor.target">0</intProp>
+            <stringProp name="ActionProcessor.duration">0</stringProp>
+          </TestAction>
+          <hashTree>
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="InitTr" enabled="true">
+              <stringProp name="cacheKey">True</stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="script">vars.put("GP","TR1")</stringProp>
+              <stringProp name="scriptLanguage">groovy</stringProp>
+            </JSR223PreProcessor>
+            <hashTree/>
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="StartTrVars" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">True</stringProp>
+              <stringProp name="script">def duration = System.currentTimeMillis().toString()
+def gpName = vars.get("GP")
+vars.put("START",duration)
+Long tot = vars.get("DUREE_"+gpName).toLong()
+vars.put("TOT",tot.toString())
+Long min = vars.get("DUREE_"+gpName+"_MIN").toLong()
+Long dE = 100
+if ( min &lt; tot ) {
+Long nbe = Math.max( 1L, vars.get("NBE_"+gpName).toLong())
+Long dT = Math.round((tot-min) * ( 1.05 -( 0.1 * Math.random()) ))
+dE =  Math.round( dT / (nbe+1) )
+}
+vars.put("ETP",dE.toString())</stringProp>
+            </JSR223PreProcessor>
+            <hashTree/>
+          </hashTree>
+          <kg.apc.jmeter.control.ParameterizedController guiclass="kg.apc.jmeter.control.ParameterizedControllerGui" testclass="kg.apc.jmeter.control.ParameterizedController" testname="_StartTrFiles" enabled="true">
+            <elementProp name="ParameterizedController" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="gp" elementType="Argument">
+                  <stringProp name="Argument.name">gp</stringProp>
+                  <stringProp name="Argument.value">${__V(GP,TRXX)}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+          </kg.apc.jmeter.control.ParameterizedController>
+          <hashTree>
+            <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="StartTrFiles" enabled="true">
+              <collectionProp name="ModuleController.node_path">
+                <stringProp name="764597751">Test Plan</stringProp>
+                <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+                <stringProp name="1252775806">FONCTIONS_INTERNES</stringProp>
+                <stringProp name="-1062277129">StartTrFiles</stringProp>
+              </collectionProp>
+            </ModuleController>
+            <hashTree/>
+          </hashTree>
+        </hashTree>
+          <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="ET01_01_accueil" enabled="true">
+              <boolProp name="TransactionController.parent">False</boolProp>
+              <boolProp name="TransactionController.includeTimers">False</boolProp>
+            </TransactionController>
+          <hashTree>
+            <TestAction guiclass="TestActionGui" testclass="TestAction" testname="_StartEtp" enabled="true">
+              <intProp name="ActionProcessor.action">1</intProp>
+              <intProp name="ActionProcessor.target">0</intProp>
+              <stringProp name="ActionProcessor.duration">0</stringProp>
+            </TestAction>
+            <hashTree>
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="StartEtp" enabled="true">
+                <stringProp name="cacheKey">True</stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="script">vars.put("atk_etape","ET01_01_accueil")</stringProp>
+                <stringProp name="scriptLanguage">groovy</stringProp>
+              </JSR223PreProcessor>
+              <hashTree/>
+            </hashTree>
+            <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="accueil" enabled="true">
+              <collectionProp name="ModuleController.node_path">
+                <stringProp name="764597751">Test Plan</stringProp>
+                <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+                <stringProp name="779094593">FONCTIONS</stringProp>
+                <stringProp name="1601548646">accueil</stringProp>
+              </collectionProp>
+            </ModuleController>
+            <hashTree/>
+            <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If KO" enabled="true">
+              <stringProp name="IfController.condition">${__jexl3( ${JMeterThread.last_sample_ok}==false)}</stringProp>
+              <boolProp name="IfController.evaluateAll">False</boolProp>
+              <boolProp name="IfController.useExpression">True</boolProp>
+            </IfController>
+            <hashTree>
+              <kg.apc.jmeter.control.ParameterizedController guiclass="kg.apc.jmeter.control.ParameterizedControllerGui" testclass="kg.apc.jmeter.control.ParameterizedController" testname="setErrorLog" enabled="true">
+                <elementProp name="ParameterizedController" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+                  <collectionProp name="Arguments.arguments">
+                    <elementProp name="param" elementType="Argument">
+                      <stringProp name="Argument.name">param</stringProp>
+                      <stringProp name="Argument.value">${__V(data,)}</stringProp>
+                      <stringProp name="Argument.metadata">=</stringProp>
+                    </elementProp>
+                  </collectionProp>
+                </elementProp>
+              </kg.apc.jmeter.control.ParameterizedController>
+              <hashTree>
+                <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="ErrorLog" enabled="true">
+                  <collectionProp name="ModuleController.node_path">
+                    <stringProp name="764597751">Test Plan</stringProp>
+                    <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+                    <stringProp name="1252775806">FONCTIONS_INTERNES</stringProp>
+                    <stringProp name="1460740156">ErrorLog</stringProp>
+                  </collectionProp>
+                </ModuleController>
+                <hashTree/>
+              </hashTree>
+            </hashTree>
+            <TestAction guiclass="TestActionGui" testclass="TestAction" testname="PauseFinEtape" enabled="true">
+              <intProp name="ActionProcessor.action">1</intProp>
+              <intProp name="ActionProcessor.target">0</intProp>
+              <stringProp name="ActionProcessor.duration">0</stringProp>
+            </TestAction>
+            <hashTree>
+              <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="Compteur de temps aleatoire uniforme" enabled="true">
+                <stringProp name="ConstantTimer.delay">${__jexl3(${ETP}/3)}</stringProp>
+                <stringProp name="RandomTimer.range">${ETP}</stringProp>
+              </UniformRandomTimer>
+              <hashTree/>
+            </hashTree>
+
+          </hashTree>
+                    <IfController guiclass="IfControllerPanel" testclass="IfController" testname="Continue ET01_02_connexion" enabled="true">
+            <stringProp name="IfController.condition">${__jexl3( ${CONTINUE_ONERROR}==true || ${JMeterThread.last_sample_ok}==true)}</stringProp>
+            <boolProp name="IfController.evaluateAll">False</boolProp>
+            <boolProp name="IfController.useExpression">True</boolProp>
+          </IfController>
+          <hashTree>
+          <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="ET01_02_connexion" enabled="true">
+              <boolProp name="TransactionController.parent">False</boolProp>
+              <boolProp name="TransactionController.includeTimers">False</boolProp>
+            </TransactionController>
+          <hashTree>
+            <TestAction guiclass="TestActionGui" testclass="TestAction" testname="_StartEtp" enabled="true">
+              <intProp name="ActionProcessor.action">1</intProp>
+              <intProp name="ActionProcessor.target">0</intProp>
+              <stringProp name="ActionProcessor.duration">0</stringProp>
+            </TestAction>
+            <hashTree>
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="StartEtp" enabled="true">
+                <stringProp name="cacheKey">True</stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="script">vars.put("atk_etape","ET01_02_connexion")</stringProp>
+                <stringProp name="scriptLanguage">groovy</stringProp>
+              </JSR223PreProcessor>
+              <hashTree/>
+            </hashTree>
+            <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="connexion" enabled="true">
+              <collectionProp name="ModuleController.node_path">
+                <stringProp name="764597751">Test Plan</stringProp>
+                <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+                <stringProp name="779094593">FONCTIONS</stringProp>
+                <stringProp name="1601548646">connexion</stringProp>
+              </collectionProp>
+            </ModuleController>
+            <hashTree/>
+            <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If KO" enabled="true">
+              <stringProp name="IfController.condition">${__jexl3( ${JMeterThread.last_sample_ok}==false)}</stringProp>
+              <boolProp name="IfController.evaluateAll">False</boolProp>
+              <boolProp name="IfController.useExpression">True</boolProp>
+            </IfController>
+            <hashTree>
+              <kg.apc.jmeter.control.ParameterizedController guiclass="kg.apc.jmeter.control.ParameterizedControllerGui" testclass="kg.apc.jmeter.control.ParameterizedController" testname="setErrorLog" enabled="true">
+                <elementProp name="ParameterizedController" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+                  <collectionProp name="Arguments.arguments">
+                    <elementProp name="param" elementType="Argument">
+                      <stringProp name="Argument.name">param</stringProp>
+                      <stringProp name="Argument.value">${__V(data,)}</stringProp>
+                      <stringProp name="Argument.metadata">=</stringProp>
+                    </elementProp>
+                  </collectionProp>
+                </elementProp>
+              </kg.apc.jmeter.control.ParameterizedController>
+              <hashTree>
+                <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="ErrorLog" enabled="true">
+                  <collectionProp name="ModuleController.node_path">
+                    <stringProp name="764597751">Test Plan</stringProp>
+                    <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+                    <stringProp name="1252775806">FONCTIONS_INTERNES</stringProp>
+                    <stringProp name="1460740156">ErrorLog</stringProp>
+                  </collectionProp>
+                </ModuleController>
+                <hashTree/>
+              </hashTree>
+            </hashTree>
+            <TestAction guiclass="TestActionGui" testclass="TestAction" testname="PauseFinEtape" enabled="true">
+              <intProp name="ActionProcessor.action">1</intProp>
+              <intProp name="ActionProcessor.target">0</intProp>
+              <stringProp name="ActionProcessor.duration">0</stringProp>
+            </TestAction>
+            <hashTree>
+              <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="Compteur de temps aleatoire uniforme" enabled="true">
+                <stringProp name="ConstantTimer.delay">${__jexl3(${ETP}/3)}</stringProp>
+                <stringProp name="RandomTimer.range">${ETP}</stringProp>
+              </UniformRandomTimer>
+              <hashTree/>
+            </hashTree>
+
+          </hashTree>
+                    <IfController guiclass="IfControllerPanel" testclass="IfController" testname="Continue ET01_03_recherche" enabled="true">
+            <stringProp name="IfController.condition">${__jexl3( ${CONTINUE_ONERROR}==true || ${JMeterThread.last_sample_ok}==true)}</stringProp>
+            <boolProp name="IfController.evaluateAll">False</boolProp>
+            <boolProp name="IfController.useExpression">True</boolProp>
+          </IfController>
+          <hashTree>
+          <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="ET01_03_recherche" enabled="true">
+              <boolProp name="TransactionController.parent">False</boolProp>
+              <boolProp name="TransactionController.includeTimers">False</boolProp>
+            </TransactionController>
+          <hashTree>
+            <TestAction guiclass="TestActionGui" testclass="TestAction" testname="_StartEtp" enabled="true">
+              <intProp name="ActionProcessor.action">1</intProp>
+              <intProp name="ActionProcessor.target">0</intProp>
+              <stringProp name="ActionProcessor.duration">0</stringProp>
+            </TestAction>
+            <hashTree>
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="StartEtp" enabled="true">
+                <stringProp name="cacheKey">True</stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="script">vars.put("atk_etape","ET01_03_recherche")</stringProp>
+                <stringProp name="scriptLanguage">groovy</stringProp>
+              </JSR223PreProcessor>
+              <hashTree/>
+            </hashTree>
+            <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="recherche" enabled="true">
+              <collectionProp name="ModuleController.node_path">
+                <stringProp name="764597751">Test Plan</stringProp>
+                <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+                <stringProp name="779094593">FONCTIONS</stringProp>
+                <stringProp name="1601548646">recherche</stringProp>
+              </collectionProp>
+            </ModuleController>
+            <hashTree/>
+            <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If KO" enabled="true">
+              <stringProp name="IfController.condition">${__jexl3( ${JMeterThread.last_sample_ok}==false)}</stringProp>
+              <boolProp name="IfController.evaluateAll">False</boolProp>
+              <boolProp name="IfController.useExpression">True</boolProp>
+            </IfController>
+            <hashTree>
+              <kg.apc.jmeter.control.ParameterizedController guiclass="kg.apc.jmeter.control.ParameterizedControllerGui" testclass="kg.apc.jmeter.control.ParameterizedController" testname="setErrorLog" enabled="true">
+                <elementProp name="ParameterizedController" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+                  <collectionProp name="Arguments.arguments">
+                    <elementProp name="param" elementType="Argument">
+                      <stringProp name="Argument.name">param</stringProp>
+                      <stringProp name="Argument.value">${__V(data,)}</stringProp>
+                      <stringProp name="Argument.metadata">=</stringProp>
+                    </elementProp>
+                  </collectionProp>
+                </elementProp>
+              </kg.apc.jmeter.control.ParameterizedController>
+              <hashTree>
+                <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="ErrorLog" enabled="true">
+                  <collectionProp name="ModuleController.node_path">
+                    <stringProp name="764597751">Test Plan</stringProp>
+                    <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+                    <stringProp name="1252775806">FONCTIONS_INTERNES</stringProp>
+                    <stringProp name="1460740156">ErrorLog</stringProp>
+                  </collectionProp>
+                </ModuleController>
+                <hashTree/>
+              </hashTree>
+            </hashTree>
+            <TestAction guiclass="TestActionGui" testclass="TestAction" testname="PauseFinEtape" enabled="true">
+              <intProp name="ActionProcessor.action">1</intProp>
+              <intProp name="ActionProcessor.target">0</intProp>
+              <stringProp name="ActionProcessor.duration">0</stringProp>
+            </TestAction>
+            <hashTree>
+              <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="Compteur de temps aleatoire uniforme" enabled="true">
+                <stringProp name="ConstantTimer.delay">${__jexl3(${ETP}/3)}</stringProp>
+                <stringProp name="RandomTimer.range">${ETP}</stringProp>
+              </UniformRandomTimer>
+              <hashTree/>
+            </hashTree>
+
+          </hashTree>
+                    <IfController guiclass="IfControllerPanel" testclass="IfController" testname="Continue ET01_04_consultation" enabled="true">
+            <stringProp name="IfController.condition">${__jexl3( ${CONTINUE_ONERROR}==true || ${JMeterThread.last_sample_ok}==true)}</stringProp>
+            <boolProp name="IfController.evaluateAll">False</boolProp>
+            <boolProp name="IfController.useExpression">True</boolProp>
+          </IfController>
+          <hashTree>
+          <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="ET01_04_consultation" enabled="true">
+              <boolProp name="TransactionController.parent">False</boolProp>
+              <boolProp name="TransactionController.includeTimers">False</boolProp>
+            </TransactionController>
+          <hashTree>
+            <TestAction guiclass="TestActionGui" testclass="TestAction" testname="_StartEtp" enabled="true">
+              <intProp name="ActionProcessor.action">1</intProp>
+              <intProp name="ActionProcessor.target">0</intProp>
+              <stringProp name="ActionProcessor.duration">0</stringProp>
+            </TestAction>
+            <hashTree>
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="StartEtp" enabled="true">
+                <stringProp name="cacheKey">True</stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="script">vars.put("atk_etape","ET01_04_consultation")</stringProp>
+                <stringProp name="scriptLanguage">groovy</stringProp>
+              </JSR223PreProcessor>
+              <hashTree/>
+            </hashTree>
+            <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="consulter_annonce" enabled="true">
+              <collectionProp name="ModuleController.node_path">
+                <stringProp name="764597751">Test Plan</stringProp>
+                <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+                <stringProp name="779094593">FONCTIONS</stringProp>
+                <stringProp name="1601548646">consulter_annonce</stringProp>
+              </collectionProp>
+            </ModuleController>
+            <hashTree/>
+            <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If KO" enabled="true">
+              <stringProp name="IfController.condition">${__jexl3( ${JMeterThread.last_sample_ok}==false)}</stringProp>
+              <boolProp name="IfController.evaluateAll">False</boolProp>
+              <boolProp name="IfController.useExpression">True</boolProp>
+            </IfController>
+            <hashTree>
+              <kg.apc.jmeter.control.ParameterizedController guiclass="kg.apc.jmeter.control.ParameterizedControllerGui" testclass="kg.apc.jmeter.control.ParameterizedController" testname="setErrorLog" enabled="true">
+                <elementProp name="ParameterizedController" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+                  <collectionProp name="Arguments.arguments">
+                    <elementProp name="param" elementType="Argument">
+                      <stringProp name="Argument.name">param</stringProp>
+                      <stringProp name="Argument.value">${__V(data,)}</stringProp>
+                      <stringProp name="Argument.metadata">=</stringProp>
+                    </elementProp>
+                  </collectionProp>
+                </elementProp>
+              </kg.apc.jmeter.control.ParameterizedController>
+              <hashTree>
+                <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="ErrorLog" enabled="true">
+                  <collectionProp name="ModuleController.node_path">
+                    <stringProp name="764597751">Test Plan</stringProp>
+                    <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+                    <stringProp name="1252775806">FONCTIONS_INTERNES</stringProp>
+                    <stringProp name="1460740156">ErrorLog</stringProp>
+                  </collectionProp>
+                </ModuleController>
+                <hashTree/>
+              </hashTree>
+            </hashTree>
+            <TestAction guiclass="TestActionGui" testclass="TestAction" testname="PauseFinEtape" enabled="true">
+              <intProp name="ActionProcessor.action">1</intProp>
+              <intProp name="ActionProcessor.target">0</intProp>
+              <stringProp name="ActionProcessor.duration">0</stringProp>
+            </TestAction>
+            <hashTree>
+              <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="Compteur de temps aleatoire uniforme" enabled="true">
+                <stringProp name="ConstantTimer.delay">${__jexl3(${ETP}/3)}</stringProp>
+                <stringProp name="RandomTimer.range">${ETP}</stringProp>
+              </UniformRandomTimer>
+              <hashTree/>
+            </hashTree>
+
+          </hashTree>
+                    <IfController guiclass="IfControllerPanel" testclass="IfController" testname="Continue ET01_05_deconnexion" enabled="true">
+            <stringProp name="IfController.condition">${__jexl3( ${CONTINUE_ONERROR}==true || ${JMeterThread.last_sample_ok}==true)}</stringProp>
+            <boolProp name="IfController.evaluateAll">False</boolProp>
+            <boolProp name="IfController.useExpression">True</boolProp>
+          </IfController>
+          <hashTree>
+          <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="ET01_05_deconnexion" enabled="true">
+              <boolProp name="TransactionController.parent">False</boolProp>
+              <boolProp name="TransactionController.includeTimers">False</boolProp>
+            </TransactionController>
+          <hashTree>
+            <TestAction guiclass="TestActionGui" testclass="TestAction" testname="_StartEtp" enabled="true">
+              <intProp name="ActionProcessor.action">1</intProp>
+              <intProp name="ActionProcessor.target">0</intProp>
+              <stringProp name="ActionProcessor.duration">0</stringProp>
+            </TestAction>
+            <hashTree>
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="StartEtp" enabled="true">
+                <stringProp name="cacheKey">True</stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="script">vars.put("atk_etape","ET01_05_deconnexion")</stringProp>
+                <stringProp name="scriptLanguage">groovy</stringProp>
+              </JSR223PreProcessor>
+              <hashTree/>
+            </hashTree>
+            <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="deconnexion" enabled="true">
+              <collectionProp name="ModuleController.node_path">
+                <stringProp name="764597751">Test Plan</stringProp>
+                <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+                <stringProp name="779094593">FONCTIONS</stringProp>
+                <stringProp name="1601548646">deconnexion</stringProp>
+              </collectionProp>
+            </ModuleController>
+            <hashTree/>
+            <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If KO" enabled="true">
+              <stringProp name="IfController.condition">${__jexl3( ${JMeterThread.last_sample_ok}==false)}</stringProp>
+              <boolProp name="IfController.evaluateAll">False</boolProp>
+              <boolProp name="IfController.useExpression">True</boolProp>
+            </IfController>
+            <hashTree>
+              <kg.apc.jmeter.control.ParameterizedController guiclass="kg.apc.jmeter.control.ParameterizedControllerGui" testclass="kg.apc.jmeter.control.ParameterizedController" testname="setErrorLog" enabled="true">
+                <elementProp name="ParameterizedController" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+                  <collectionProp name="Arguments.arguments">
+                    <elementProp name="param" elementType="Argument">
+                      <stringProp name="Argument.name">param</stringProp>
+                      <stringProp name="Argument.value">${__V(data,)}</stringProp>
+                      <stringProp name="Argument.metadata">=</stringProp>
+                    </elementProp>
+                  </collectionProp>
+                </elementProp>
+              </kg.apc.jmeter.control.ParameterizedController>
+              <hashTree>
+                <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="ErrorLog" enabled="true">
+                  <collectionProp name="ModuleController.node_path">
+                    <stringProp name="764597751">Test Plan</stringProp>
+                    <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+                    <stringProp name="1252775806">FONCTIONS_INTERNES</stringProp>
+                    <stringProp name="1460740156">ErrorLog</stringProp>
+                  </collectionProp>
+                </ModuleController>
+                <hashTree/>
+              </hashTree>
+            </hashTree>
+            <TestAction guiclass="TestActionGui" testclass="TestAction" testname="PauseFinEtape" enabled="true">
+              <intProp name="ActionProcessor.action">1</intProp>
+              <intProp name="ActionProcessor.target">0</intProp>
+              <stringProp name="ActionProcessor.duration">0</stringProp>
+            </TestAction>
+            <hashTree>
+              <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="Compteur de temps aleatoire uniforme" enabled="true">
+                <stringProp name="ConstantTimer.delay">${__jexl3(${ETP}/3)}</stringProp>
+                <stringProp name="RandomTimer.range">${ETP}</stringProp>
+              </UniformRandomTimer>
+              <hashTree/>
+            </hashTree>
+
+                      <TestAction guiclass="TestActionGui" testclass="TestAction" testname="Pacing" enabled="true">
+              <intProp name="ActionProcessor.target">0</intProp>
+              <stringProp name="ActionProcessor.duration">0</stringProp>
+              <intProp name="ActionProcessor.action">1</intProp>
+            </TestAction>
+            <hashTree>
+              <JSR223Timer guiclass="TestBeanGUI" testclass="JSR223Timer" testname="_Elapsed" enabled="true">
+                <stringProp name="cacheKey">True</stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="script">def start=vars.get("START").toLong()
+def tot=vars.get("TOT").toLong()
+def End = System.currentTimeMillis()
+def elapsed=End-start
+def waitPacing=0
+if(elapsed &lt; tot) {waitPacing = tot-elapsed}
+return waitPacing</stringProp>
+                <stringProp name="scriptLanguage">groovy</stringProp>
+              </JSR223Timer>
+              <hashTree/>
+            </hashTree>
+          </hashTree>
+          </hashTree>
+          </hashTree>
+          </hashTree>
+          </hashTree>
+        </hashTree>
+        <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="TR02_bailleur" enabled="true">
+          <boolProp name="TransactionController.parent">False</boolProp>
+          <boolProp name="TransactionController.includeTimers">False</boolProp>
+        </TransactionController>
+        <hashTree>
+        <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="TR2 File Config" enabled="true">
+          <stringProp name="delimiter">,</stringProp>
+          <stringProp name="fileEncoding">utf8</stringProp>
+          <stringProp name="filename">data/${CSV-TR02}</stringProp>
+          <boolProp name="quotedData">True</boolProp>
+          <boolProp name="recycle">True</boolProp>
+          <stringProp name="shareMode">shareMode.group</stringProp>
+          <boolProp name="stopThread">False</boolProp>
+          <stringProp name="variableNames">login,pass,ville</stringProp>
+          <boolProp name="ignoreFirstLine">True</boolProp>
+        </CSVDataSet>
+        <hashTree/>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="_StartTr" enabled="true"/>
+        <hashTree>
+          <TestAction guiclass="TestActionGui" testclass="TestAction" testname="_InitTr" enabled="true">
+            <intProp name="ActionProcessor.action">1</intProp>
+            <intProp name="ActionProcessor.target">0</intProp>
+            <stringProp name="ActionProcessor.duration">0</stringProp>
+          </TestAction>
+          <hashTree>
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="InitTr" enabled="true">
+              <stringProp name="cacheKey">True</stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="script">vars.put("GP","TR2")</stringProp>
+              <stringProp name="scriptLanguage">groovy</stringProp>
+            </JSR223PreProcessor>
+            <hashTree/>
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="StartTrVars" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">True</stringProp>
+              <stringProp name="script">def duration = System.currentTimeMillis().toString()
+def gpName = vars.get("GP")
+vars.put("START",duration)
+Long tot = vars.get("DUREE_"+gpName).toLong()
+vars.put("TOT",tot.toString())
+Long min = vars.get("DUREE_"+gpName+"_MIN").toLong()
+Long dE = 100
+if ( min &lt; tot ) {
+Long nbe = Math.max( 1L, vars.get("NBE_"+gpName).toLong())
+Long dT = Math.round((tot-min) * ( 1.05 -( 0.1 * Math.random()) ))
+dE =  Math.round( dT / (nbe+1) )
+}
+vars.put("ETP",dE.toString())</stringProp>
+            </JSR223PreProcessor>
+            <hashTree/>
+          </hashTree>
+          <kg.apc.jmeter.control.ParameterizedController guiclass="kg.apc.jmeter.control.ParameterizedControllerGui" testclass="kg.apc.jmeter.control.ParameterizedController" testname="_StartTrFiles" enabled="true">
+            <elementProp name="ParameterizedController" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="gp" elementType="Argument">
+                  <stringProp name="Argument.name">gp</stringProp>
+                  <stringProp name="Argument.value">${__V(GP,TRXX)}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+          </kg.apc.jmeter.control.ParameterizedController>
+          <hashTree>
+            <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="StartTrFiles" enabled="true">
+              <collectionProp name="ModuleController.node_path">
+                <stringProp name="764597751">Test Plan</stringProp>
+                <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+                <stringProp name="1252775806">FONCTIONS_INTERNES</stringProp>
+                <stringProp name="-1062277129">StartTrFiles</stringProp>
+              </collectionProp>
+            </ModuleController>
+            <hashTree/>
+          </hashTree>
+        </hashTree>
+          <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="ET02_01_accueil" enabled="true">
+              <boolProp name="TransactionController.parent">False</boolProp>
+              <boolProp name="TransactionController.includeTimers">False</boolProp>
+            </TransactionController>
+          <hashTree>
+            <TestAction guiclass="TestActionGui" testclass="TestAction" testname="_StartEtp" enabled="true">
+              <intProp name="ActionProcessor.action">1</intProp>
+              <intProp name="ActionProcessor.target">0</intProp>
+              <stringProp name="ActionProcessor.duration">0</stringProp>
+            </TestAction>
+            <hashTree>
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="StartEtp" enabled="true">
+                <stringProp name="cacheKey">True</stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="script">vars.put("atk_etape","ET02_01_accueil")</stringProp>
+                <stringProp name="scriptLanguage">groovy</stringProp>
+              </JSR223PreProcessor>
+              <hashTree/>
+            </hashTree>
+            <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="accueil" enabled="true">
+              <collectionProp name="ModuleController.node_path">
+                <stringProp name="764597751">Test Plan</stringProp>
+                <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+                <stringProp name="779094593">FONCTIONS</stringProp>
+                <stringProp name="1601548646">accueil</stringProp>
+              </collectionProp>
+            </ModuleController>
+            <hashTree/>
+            <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If KO" enabled="true">
+              <stringProp name="IfController.condition">${__jexl3( ${JMeterThread.last_sample_ok}==false)}</stringProp>
+              <boolProp name="IfController.evaluateAll">False</boolProp>
+              <boolProp name="IfController.useExpression">True</boolProp>
+            </IfController>
+            <hashTree>
+              <kg.apc.jmeter.control.ParameterizedController guiclass="kg.apc.jmeter.control.ParameterizedControllerGui" testclass="kg.apc.jmeter.control.ParameterizedController" testname="setErrorLog" enabled="true">
+                <elementProp name="ParameterizedController" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+                  <collectionProp name="Arguments.arguments">
+                    <elementProp name="param" elementType="Argument">
+                      <stringProp name="Argument.name">param</stringProp>
+                      <stringProp name="Argument.value">${__V(data,)}</stringProp>
+                      <stringProp name="Argument.metadata">=</stringProp>
+                    </elementProp>
+                  </collectionProp>
+                </elementProp>
+              </kg.apc.jmeter.control.ParameterizedController>
+              <hashTree>
+                <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="ErrorLog" enabled="true">
+                  <collectionProp name="ModuleController.node_path">
+                    <stringProp name="764597751">Test Plan</stringProp>
+                    <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+                    <stringProp name="1252775806">FONCTIONS_INTERNES</stringProp>
+                    <stringProp name="1460740156">ErrorLog</stringProp>
+                  </collectionProp>
+                </ModuleController>
+                <hashTree/>
+              </hashTree>
+            </hashTree>
+            <TestAction guiclass="TestActionGui" testclass="TestAction" testname="PauseFinEtape" enabled="true">
+              <intProp name="ActionProcessor.action">1</intProp>
+              <intProp name="ActionProcessor.target">0</intProp>
+              <stringProp name="ActionProcessor.duration">0</stringProp>
+            </TestAction>
+            <hashTree>
+              <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="Compteur de temps aleatoire uniforme" enabled="true">
+                <stringProp name="ConstantTimer.delay">${__jexl3(${ETP}/3)}</stringProp>
+                <stringProp name="RandomTimer.range">${ETP}</stringProp>
+              </UniformRandomTimer>
+              <hashTree/>
+            </hashTree>
+
+          </hashTree>
+                    <IfController guiclass="IfControllerPanel" testclass="IfController" testname="Continue ET02_02_connexion" enabled="true">
+            <stringProp name="IfController.condition">${__jexl3( ${CONTINUE_ONERROR}==true || ${JMeterThread.last_sample_ok}==true)}</stringProp>
+            <boolProp name="IfController.evaluateAll">False</boolProp>
+            <boolProp name="IfController.useExpression">True</boolProp>
+          </IfController>
+          <hashTree>
+          <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="ET02_02_connexion" enabled="true">
+              <boolProp name="TransactionController.parent">False</boolProp>
+              <boolProp name="TransactionController.includeTimers">False</boolProp>
+            </TransactionController>
+          <hashTree>
+            <TestAction guiclass="TestActionGui" testclass="TestAction" testname="_StartEtp" enabled="true">
+              <intProp name="ActionProcessor.action">1</intProp>
+              <intProp name="ActionProcessor.target">0</intProp>
+              <stringProp name="ActionProcessor.duration">0</stringProp>
+            </TestAction>
+            <hashTree>
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="StartEtp" enabled="true">
+                <stringProp name="cacheKey">True</stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="script">vars.put("atk_etape","ET02_02_connexion")</stringProp>
+                <stringProp name="scriptLanguage">groovy</stringProp>
+              </JSR223PreProcessor>
+              <hashTree/>
+            </hashTree>
+            <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="connexion" enabled="true">
+              <collectionProp name="ModuleController.node_path">
+                <stringProp name="764597751">Test Plan</stringProp>
+                <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+                <stringProp name="779094593">FONCTIONS</stringProp>
+                <stringProp name="1601548646">connexion</stringProp>
+              </collectionProp>
+            </ModuleController>
+            <hashTree/>
+            <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If KO" enabled="true">
+              <stringProp name="IfController.condition">${__jexl3( ${JMeterThread.last_sample_ok}==false)}</stringProp>
+              <boolProp name="IfController.evaluateAll">False</boolProp>
+              <boolProp name="IfController.useExpression">True</boolProp>
+            </IfController>
+            <hashTree>
+              <kg.apc.jmeter.control.ParameterizedController guiclass="kg.apc.jmeter.control.ParameterizedControllerGui" testclass="kg.apc.jmeter.control.ParameterizedController" testname="setErrorLog" enabled="true">
+                <elementProp name="ParameterizedController" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+                  <collectionProp name="Arguments.arguments">
+                    <elementProp name="param" elementType="Argument">
+                      <stringProp name="Argument.name">param</stringProp>
+                      <stringProp name="Argument.value">${__V(data,)}</stringProp>
+                      <stringProp name="Argument.metadata">=</stringProp>
+                    </elementProp>
+                  </collectionProp>
+                </elementProp>
+              </kg.apc.jmeter.control.ParameterizedController>
+              <hashTree>
+                <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="ErrorLog" enabled="true">
+                  <collectionProp name="ModuleController.node_path">
+                    <stringProp name="764597751">Test Plan</stringProp>
+                    <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+                    <stringProp name="1252775806">FONCTIONS_INTERNES</stringProp>
+                    <stringProp name="1460740156">ErrorLog</stringProp>
+                  </collectionProp>
+                </ModuleController>
+                <hashTree/>
+              </hashTree>
+            </hashTree>
+            <TestAction guiclass="TestActionGui" testclass="TestAction" testname="PauseFinEtape" enabled="true">
+              <intProp name="ActionProcessor.action">1</intProp>
+              <intProp name="ActionProcessor.target">0</intProp>
+              <stringProp name="ActionProcessor.duration">0</stringProp>
+            </TestAction>
+            <hashTree>
+              <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="Compteur de temps aleatoire uniforme" enabled="true">
+                <stringProp name="ConstantTimer.delay">${__jexl3(${ETP}/3)}</stringProp>
+                <stringProp name="RandomTimer.range">${ETP}</stringProp>
+              </UniformRandomTimer>
+              <hashTree/>
+            </hashTree>
+
+          </hashTree>
+                    <IfController guiclass="IfControllerPanel" testclass="IfController" testname="Continue ET02_03_depot_annonce" enabled="true">
+            <stringProp name="IfController.condition">${__jexl3( ${CONTINUE_ONERROR}==true || ${JMeterThread.last_sample_ok}==true)}</stringProp>
+            <boolProp name="IfController.evaluateAll">False</boolProp>
+            <boolProp name="IfController.useExpression">True</boolProp>
+          </IfController>
+          <hashTree>
+          <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="ET02_03_depot_annonce" enabled="true">
+              <boolProp name="TransactionController.parent">False</boolProp>
+              <boolProp name="TransactionController.includeTimers">False</boolProp>
+            </TransactionController>
+          <hashTree>
+            <TestAction guiclass="TestActionGui" testclass="TestAction" testname="_StartEtp" enabled="true">
+              <intProp name="ActionProcessor.action">1</intProp>
+              <intProp name="ActionProcessor.target">0</intProp>
+              <stringProp name="ActionProcessor.duration">0</stringProp>
+            </TestAction>
+            <hashTree>
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="StartEtp" enabled="true">
+                <stringProp name="cacheKey">True</stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="script">vars.put("atk_etape","ET02_03_depot_annonce")</stringProp>
+                <stringProp name="scriptLanguage">groovy</stringProp>
+              </JSR223PreProcessor>
+              <hashTree/>
+            </hashTree>
+            <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="depot_annonce" enabled="true">
+              <collectionProp name="ModuleController.node_path">
+                <stringProp name="764597751">Test Plan</stringProp>
+                <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+                <stringProp name="779094593">FONCTIONS</stringProp>
+                <stringProp name="1601548646">depot_annonce</stringProp>
+              </collectionProp>
+            </ModuleController>
+            <hashTree/>
+            <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If KO" enabled="true">
+              <stringProp name="IfController.condition">${__jexl3( ${JMeterThread.last_sample_ok}==false)}</stringProp>
+              <boolProp name="IfController.evaluateAll">False</boolProp>
+              <boolProp name="IfController.useExpression">True</boolProp>
+            </IfController>
+            <hashTree>
+              <kg.apc.jmeter.control.ParameterizedController guiclass="kg.apc.jmeter.control.ParameterizedControllerGui" testclass="kg.apc.jmeter.control.ParameterizedController" testname="setErrorLog" enabled="true">
+                <elementProp name="ParameterizedController" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+                  <collectionProp name="Arguments.arguments">
+                    <elementProp name="param" elementType="Argument">
+                      <stringProp name="Argument.name">param</stringProp>
+                      <stringProp name="Argument.value">${__V(data,)}</stringProp>
+                      <stringProp name="Argument.metadata">=</stringProp>
+                    </elementProp>
+                  </collectionProp>
+                </elementProp>
+              </kg.apc.jmeter.control.ParameterizedController>
+              <hashTree>
+                <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="ErrorLog" enabled="true">
+                  <collectionProp name="ModuleController.node_path">
+                    <stringProp name="764597751">Test Plan</stringProp>
+                    <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+                    <stringProp name="1252775806">FONCTIONS_INTERNES</stringProp>
+                    <stringProp name="1460740156">ErrorLog</stringProp>
+                  </collectionProp>
+                </ModuleController>
+                <hashTree/>
+              </hashTree>
+            </hashTree>
+            <TestAction guiclass="TestActionGui" testclass="TestAction" testname="PauseFinEtape" enabled="true">
+              <intProp name="ActionProcessor.action">1</intProp>
+              <intProp name="ActionProcessor.target">0</intProp>
+              <stringProp name="ActionProcessor.duration">0</stringProp>
+            </TestAction>
+            <hashTree>
+              <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="Compteur de temps aleatoire uniforme" enabled="true">
+                <stringProp name="ConstantTimer.delay">${__jexl3(${ETP}/3)}</stringProp>
+                <stringProp name="RandomTimer.range">${ETP}</stringProp>
+              </UniformRandomTimer>
+              <hashTree/>
+            </hashTree>
+
+          </hashTree>
+                    <IfController guiclass="IfControllerPanel" testclass="IfController" testname="Continue ET02_04_verification" enabled="true">
+            <stringProp name="IfController.condition">${__jexl3( ${CONTINUE_ONERROR}==true || ${JMeterThread.last_sample_ok}==true)}</stringProp>
+            <boolProp name="IfController.evaluateAll">False</boolProp>
+            <boolProp name="IfController.useExpression">True</boolProp>
+          </IfController>
+          <hashTree>
+          <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="ET02_04_verification" enabled="true">
+              <boolProp name="TransactionController.parent">False</boolProp>
+              <boolProp name="TransactionController.includeTimers">False</boolProp>
+            </TransactionController>
+          <hashTree>
+            <TestAction guiclass="TestActionGui" testclass="TestAction" testname="_StartEtp" enabled="true">
+              <intProp name="ActionProcessor.action">1</intProp>
+              <intProp name="ActionProcessor.target">0</intProp>
+              <stringProp name="ActionProcessor.duration">0</stringProp>
+            </TestAction>
+            <hashTree>
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="StartEtp" enabled="true">
+                <stringProp name="cacheKey">True</stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="script">vars.put("atk_etape","ET02_04_verification")</stringProp>
+                <stringProp name="scriptLanguage">groovy</stringProp>
+              </JSR223PreProcessor>
+              <hashTree/>
+            </hashTree>
+            <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="consulter_annonce" enabled="true">
+              <collectionProp name="ModuleController.node_path">
+                <stringProp name="764597751">Test Plan</stringProp>
+                <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+                <stringProp name="779094593">FONCTIONS</stringProp>
+                <stringProp name="1601548646">consulter_annonce</stringProp>
+              </collectionProp>
+            </ModuleController>
+            <hashTree/>
+            <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If KO" enabled="true">
+              <stringProp name="IfController.condition">${__jexl3( ${JMeterThread.last_sample_ok}==false)}</stringProp>
+              <boolProp name="IfController.evaluateAll">False</boolProp>
+              <boolProp name="IfController.useExpression">True</boolProp>
+            </IfController>
+            <hashTree>
+              <kg.apc.jmeter.control.ParameterizedController guiclass="kg.apc.jmeter.control.ParameterizedControllerGui" testclass="kg.apc.jmeter.control.ParameterizedController" testname="setErrorLog" enabled="true">
+                <elementProp name="ParameterizedController" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+                  <collectionProp name="Arguments.arguments">
+                    <elementProp name="param" elementType="Argument">
+                      <stringProp name="Argument.name">param</stringProp>
+                      <stringProp name="Argument.value">${__V(data,)}</stringProp>
+                      <stringProp name="Argument.metadata">=</stringProp>
+                    </elementProp>
+                  </collectionProp>
+                </elementProp>
+              </kg.apc.jmeter.control.ParameterizedController>
+              <hashTree>
+                <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="ErrorLog" enabled="true">
+                  <collectionProp name="ModuleController.node_path">
+                    <stringProp name="764597751">Test Plan</stringProp>
+                    <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+                    <stringProp name="1252775806">FONCTIONS_INTERNES</stringProp>
+                    <stringProp name="1460740156">ErrorLog</stringProp>
+                  </collectionProp>
+                </ModuleController>
+                <hashTree/>
+              </hashTree>
+            </hashTree>
+            <TestAction guiclass="TestActionGui" testclass="TestAction" testname="PauseFinEtape" enabled="true">
+              <intProp name="ActionProcessor.action">1</intProp>
+              <intProp name="ActionProcessor.target">0</intProp>
+              <stringProp name="ActionProcessor.duration">0</stringProp>
+            </TestAction>
+            <hashTree>
+              <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="Compteur de temps aleatoire uniforme" enabled="true">
+                <stringProp name="ConstantTimer.delay">${__jexl3(${ETP}/3)}</stringProp>
+                <stringProp name="RandomTimer.range">${ETP}</stringProp>
+              </UniformRandomTimer>
+              <hashTree/>
+            </hashTree>
+
+          </hashTree>
+                    <IfController guiclass="IfControllerPanel" testclass="IfController" testname="Continue ET02_05_deconnexion" enabled="true">
+            <stringProp name="IfController.condition">${__jexl3( ${CONTINUE_ONERROR}==true || ${JMeterThread.last_sample_ok}==true)}</stringProp>
+            <boolProp name="IfController.evaluateAll">False</boolProp>
+            <boolProp name="IfController.useExpression">True</boolProp>
+          </IfController>
+          <hashTree>
+          <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="ET02_05_deconnexion" enabled="true">
+              <boolProp name="TransactionController.parent">False</boolProp>
+              <boolProp name="TransactionController.includeTimers">False</boolProp>
+            </TransactionController>
+          <hashTree>
+            <TestAction guiclass="TestActionGui" testclass="TestAction" testname="_StartEtp" enabled="true">
+              <intProp name="ActionProcessor.action">1</intProp>
+              <intProp name="ActionProcessor.target">0</intProp>
+              <stringProp name="ActionProcessor.duration">0</stringProp>
+            </TestAction>
+            <hashTree>
+              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="StartEtp" enabled="true">
+                <stringProp name="cacheKey">True</stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="script">vars.put("atk_etape","ET02_05_deconnexion")</stringProp>
+                <stringProp name="scriptLanguage">groovy</stringProp>
+              </JSR223PreProcessor>
+              <hashTree/>
+            </hashTree>
+            <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="deconnexion" enabled="true">
+              <collectionProp name="ModuleController.node_path">
+                <stringProp name="764597751">Test Plan</stringProp>
+                <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+                <stringProp name="779094593">FONCTIONS</stringProp>
+                <stringProp name="1601548646">deconnexion</stringProp>
+              </collectionProp>
+            </ModuleController>
+            <hashTree/>
+            <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If KO" enabled="true">
+              <stringProp name="IfController.condition">${__jexl3( ${JMeterThread.last_sample_ok}==false)}</stringProp>
+              <boolProp name="IfController.evaluateAll">False</boolProp>
+              <boolProp name="IfController.useExpression">True</boolProp>
+            </IfController>
+            <hashTree>
+              <kg.apc.jmeter.control.ParameterizedController guiclass="kg.apc.jmeter.control.ParameterizedControllerGui" testclass="kg.apc.jmeter.control.ParameterizedController" testname="setErrorLog" enabled="true">
+                <elementProp name="ParameterizedController" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+                  <collectionProp name="Arguments.arguments">
+                    <elementProp name="param" elementType="Argument">
+                      <stringProp name="Argument.name">param</stringProp>
+                      <stringProp name="Argument.value">${__V(data,)}</stringProp>
+                      <stringProp name="Argument.metadata">=</stringProp>
+                    </elementProp>
+                  </collectionProp>
+                </elementProp>
+              </kg.apc.jmeter.control.ParameterizedController>
+              <hashTree>
+                <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="ErrorLog" enabled="true">
+                  <collectionProp name="ModuleController.node_path">
+                    <stringProp name="764597751">Test Plan</stringProp>
+                    <stringProp name="1644739776">locimmo_Web_Workload</stringProp>
+                    <stringProp name="1252775806">FONCTIONS_INTERNES</stringProp>
+                    <stringProp name="1460740156">ErrorLog</stringProp>
+                  </collectionProp>
+                </ModuleController>
+                <hashTree/>
+              </hashTree>
+            </hashTree>
+            <TestAction guiclass="TestActionGui" testclass="TestAction" testname="PauseFinEtape" enabled="true">
+              <intProp name="ActionProcessor.action">1</intProp>
+              <intProp name="ActionProcessor.target">0</intProp>
+              <stringProp name="ActionProcessor.duration">0</stringProp>
+            </TestAction>
+            <hashTree>
+              <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="Compteur de temps aleatoire uniforme" enabled="true">
+                <stringProp name="ConstantTimer.delay">${__jexl3(${ETP}/3)}</stringProp>
+                <stringProp name="RandomTimer.range">${ETP}</stringProp>
+              </UniformRandomTimer>
+              <hashTree/>
+            </hashTree>
+
+                      <TestAction guiclass="TestActionGui" testclass="TestAction" testname="Pacing" enabled="true">
+              <intProp name="ActionProcessor.target">0</intProp>
+              <stringProp name="ActionProcessor.duration">0</stringProp>
+              <intProp name="ActionProcessor.action">1</intProp>
+            </TestAction>
+            <hashTree>
+              <JSR223Timer guiclass="TestBeanGUI" testclass="JSR223Timer" testname="_Elapsed" enabled="true">
+                <stringProp name="cacheKey">True</stringProp>
+                <stringProp name="filename"></stringProp>
+                <stringProp name="parameters"></stringProp>
+                <stringProp name="script">def start=vars.get("START").toLong()
+def tot=vars.get("TOT").toLong()
+def End = System.currentTimeMillis()
+def elapsed=End-start
+def waitPacing=0
+if(elapsed &lt; tot) {waitPacing = tot-elapsed}
+return waitPacing</stringProp>
+                <stringProp name="scriptLanguage">groovy</stringProp>
+              </JSR223Timer>
+              <hashTree/>
+            </hashTree>
+          </hashTree>
+          </hashTree>
+          </hashTree>
+          </hashTree>
+          </hashTree>
+        </hashTree>
+    </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>
