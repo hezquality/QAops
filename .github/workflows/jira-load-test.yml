@@ -3,9 +3,26 @@ name: Jira → Génération de test de charge (@claude)
 # Déclenché depuis Jira (automation → web request → repository_dispatch type jira-load-test).
 # @claude lit le ticket de charge et génère un plan JMeter (.jmx) dans load/, puis ouvre une PR.
 # La PR déclenche ensuite load-report.yml (exécution JMeter + rapport de perf).
+#
+# workflow_dispatch : relance manuelle sur une clé Jira donnée, avec choix du
+# modèle. Sert aux comparaisons A/B (même ticket, même prompt, modèle différent)
+# et au rejeu d'une génération sans toucher au board Jira.
 on:
   repository_dispatch:
     types: [jira-load-test]
+  workflow_dispatch:
+    inputs:
+      jira_key:
+        description: "Clé Jira à traiter (ex. LIM-9)"
+        required: true
+      model:
+        description: "Modèle (vide = défaut de l'action ; ex. opus, sonnet, claude-opus-4-8)"
+        required: false
+        default: ""
+      run_label:
+        description: "Suffixe de branche/PR, pour ne pas écraser un run précédent (ex. opus)"
+        required: false
+        default: ""
 
 jobs:
   generate:
@@ -15,6 +32,10 @@ jobs:
       JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
       JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
       GH_TOKEN: ${{ github.token }}
+      # Clé Jira : depuis le dispatch Jira, ou depuis la relance manuelle.
+      JIRA_KEY: ${{ github.event.client_payload.jira_key || inputs.jira_key }}
+      # Suffixe de run (A/B) : vide sur un dispatch Jira normal.
+      RUN_LABEL: ${{ inputs.run_label || '' }}
     permissions:
       contents: write
       pull-requests: write
@@ -35,17 +56,20 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # --model n'est ajouté que si la relance manuelle en fournit un ;
+          # sinon l'action garde son modèle par défaut.
           claude_args: >-
+            ${{ inputs.model && format('--model {0}', inputs.model) || '' }}
             --allowedTools "Edit,Write,Read,Glob,Grep,Bash"
           prompt: |
             Tu génères un plan de test de charge JMeter (.jmx) à partir d'un ticket Jira de performance,
             au format du template partenaire ATAKAMA « PH ».
 
-            Ticket Jira : ${{ github.event.client_payload.jira_key }}
+            Ticket Jira : ${{ env.JIRA_KEY }}
 
             1) Récupère le scénario depuis Jira :
                curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" -H "Accept: application/json" \
-                 "$JIRA_BASE_URL/rest/api/2/issue/${{ github.event.client_payload.jira_key }}?fields=summary,description"
+                 "$JIRA_BASE_URL/rest/api/2/issue/${{ env.JIRA_KEY }}?fields=summary,description"
                La description est le plus souvent écrite en langage MÉTIER (Étant donné / Quand / Alors),
                sans détail technique. DÉRIVE toi-même la structure de charge :
                - les TRANSACTIONS (TRxx) = les parcours métier du ticket (un parcours = une transaction) ;
@@ -60,11 +84,15 @@ jobs:
                - Réutilise la structure et les briques techniques de `load/templates/PH_Template_Web_Workload.jmx` (RÉUTILISE VERBATIM `FONCTIONS_INTERNES`, la config globale et les blocs `UDV_*`).
                - Génère UNIQUEMENT la logique métier : fragments `TRANSACTIONS` (TRxx_<nom> → étapes ETxx_yy_<nom>), `FONCTIONS` (briques réutilisables appelées par ModuleController), JDD, blocs UDV.
                - NE GÉNÈRE PAS l'injection ni les profils de charge (UltimateThreadGroup, paliers, VUs, ramp/hold, throughput) : c'est le cockpit / l'agent ph_jmeter qui les pose. Laisse au plus des ThreadGroups « Tests TRxx » DÉSACTIVÉS pour le tir unitaire.
-               - Paramétrage via `${__P(...)}` (host, port, protocole, projet, timeout…). `@${{ github.event.client_payload.jira_key }}` dans TestPlan.comments.
+               - Paramétrage via `${__P(...)}` (host, port, protocole, projet, timeout…). `@${{ env.JIRA_KEY }}` dans TestPlan.comments.
                - Conventions de nommage strictes (TRxx_/ETxx_yy_), gestion d'erreur (`If KO` → ErrorLog), pacing normalisé (`PauseFinEtape` UniformRandomTimer), `guiclass` valides (ouverture GUI).
 
-            3) Crée une branche dédiée, commit le `.jmx` + les CSV, puis ouvre une PR décrivant les transactions/étapes et liée à ${{ github.event.client_payload.jira_key }}. NE MERGE JAMAIS — revue humaine.
+            3) Crée une branche dédiée, commit le `.jmx` + les CSV, puis ouvre une PR décrivant les transactions/étapes et liée à ${{ env.JIRA_KEY }}. NE MERGE JAMAIS — revue humaine.
                (Rappel : la charge réelle est jouée par le cockpit ; la CI se limite à valider/tirer unitairement les transactions.)
+               La variable d'environnement RUN_LABEL vaut « ${{ env.RUN_LABEL }} ». Si elle est NON VIDE, suffixe
+               le nom de branche ET le titre de la PR avec « -RUN_LABEL » (ex. `load/lim-9-recherche-opus`,
+               titre « … (LIM-9) [opus] ») : plusieurs runs du même ticket coexistent alors sans collision.
+               Nomme aussi le `.jmx` en conséquence pour ne pas écraser un plan existant.
 
             LIVRABLE OBLIGATOIRE : ce job DOIT se terminer par une PR ouverte. Ne termine JAMAIS sans PR.
             Si une information manque, fais l'hypothèse la plus raisonnable et documente-la dans une section
@@ -76,15 +104,13 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: claude-execution-${{ github.event.client_payload.jira_key }}
+          name: claude-execution-${{ env.JIRA_KEY }}${{ env.RUN_LABEL && format('-{0}', env.RUN_LABEL) || '' }}-${{ github.run_id }}
           path: /home/runner/work/_temp/claude-execution-output.json
           if-no-files-found: warn
           retention-days: 14
 
       # Filet de sécurité : un run vert sans PR est un échec silencieux — on le rend visible.
       - name: Vérifie qu'une PR a été ouverte
-        env:
-          JIRA_KEY: ${{ github.event.client_payload.jira_key }}
         run: |
           if gh pr list --repo "${{ github.repository }}" --state open \
                --json title,headRefName --jq '.[] | "\(.title) \(.headRefName)"' \
