@@ -19,7 +19,9 @@ export class LoginPage extends BasePage {
     super(page);
     this.emailInput = page.getByRole('textbox', { name: 'Email' });
     this.passwordInput = page.getByRole('textbox', { name: 'Mot de passe', exact: true });
-    this.submitButton = page.getByRole('button', { name: 'Se connecter' });
+    // exact:true — la page a aussi un bouton « → Se connecter avec le compte démo »
+    // qui matcherait sinon (strict mode violation).
+    this.submitButton = page.getByRole('button', { name: 'Se connecter', exact: true });
     this.errorMessage = page.getByText('Email ou mot de passe incorrect');
   }
 
