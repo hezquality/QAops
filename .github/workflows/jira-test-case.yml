@@ -66,6 +66,10 @@ jobs:
             - Si un sélecteur manque, explore le DOM réel via le MCP Playwright.
             - Lance `npm test` (au moins le projet chromium) et corrige jusqu'au vert.
             - Crée une branche dédiée, commit, puis ouvre une PR décrivant le scénario et liée à ${{ github.event.client_payload.jira_key }}. NE MERGE JAMAIS — revue humaine obligatoire.
+            - LIVRABLE OBLIGATOIRE : termine TOUJOURS par une PR ouverte. Si quelque chose bloque
+              (sélecteur introuvable, test encore rouge malgré tes corrections), ouvre quand même la PR
+              avec l'état atteint et documente le blocage dans son corps — ne pose pas de question en
+              fin de tour : personne ne lit ta sortie, seule la PR est relue.
 
       # Preuve d'exécution : rapport HTML + captures + traces téléchargeables depuis le run.
       - name: Upload rapport Playwright
@@ -78,3 +82,27 @@ jobs:
             test-results/
           retention-days: 14
           if-no-files-found: ignore
+
+      # Observabilité : la transcription de l'agent (tours, décisions) archivée avec le run.
+      - name: Upload transcription de l'agent
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-execution-${{ github.event.client_payload.jira_key }}
+          path: /home/runner/work/_temp/claude-execution-output.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      # Filet de sécurité : un run vert sans PR est un échec silencieux — on le rend visible.
+      - name: Vérifie qu'une PR a été ouverte
+        env:
+          JIRA_KEY: ${{ github.event.client_payload.jira_key }}
+        run: |
+          if gh pr list --repo "${{ github.repository }}" --state open \
+               --json title,headRefName --jq '.[] | "\(.title) \(.headRefName)"' \
+               | grep -qi "$JIRA_KEY"; then
+            echo "PR trouvée pour $JIRA_KEY"
+          else
+            echo "::error::L'agent a terminé sans ouvrir de PR pour $JIRA_KEY (échec silencieux)."
+            exit 1
+          fi

@@ -46,8 +46,15 @@ jobs:
             1) Récupère le scénario depuis Jira :
                curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" -H "Accept: application/json" \
                  "$JIRA_BASE_URL/rest/api/2/issue/${{ github.event.client_payload.jira_key }}?fields=summary,description"
-               La description décrit des TRANSACTIONS (parcours métier), leurs ÉTAPES, les fonctions communes et les
-               colonnes des JDD. Crée les JDD `load/data/<PROJET>-TRxx.csv` (colonnes login,pass) depuis le ticket / ses pièces jointes.
+               La description est le plus souvent écrite en langage MÉTIER (Étant donné / Quand / Alors),
+               sans détail technique. DÉRIVE toi-même la structure de charge :
+               - les TRANSACTIONS (TRxx) = les parcours métier du ticket (un parcours = une transaction) ;
+               - leurs ÉTAPES (ETxx_yy) = chaque action du parcours, traduite en appels HTTP via le
+                 « Mapping métier » de CLAUDE.md (se connecter = POST /api/auth/login, rechercher = GET /api/listings?city=, …) ;
+               - les FONCTIONS communes = toute action partagée par plusieurs transactions (ex. connexion) ;
+               - les JDD `load/data/<PROJET>-TRxx.csv` (colonnes login,pass par défaut) — si le ticket ne fournit
+                 pas de comptes, génère des jeux plausibles et tiens compte de la DB éphémère (inscription préalable, voir CLAUDE.md).
+               Si le ticket contient déjà des transactions/étapes explicites, elles priment sur ta dérivation.
 
             2) Génère `load/<projet>.jmx` en respectant STRICTEMENT la section « Tests de charge (JMeter) — convention ATAKAMA PH » de CLAUDE.md :
                - Réutilise la structure et les briques techniques de `load/templates/PH_Template_Web_Workload.jmx` (RÉUTILISE VERBATIM `FONCTIONS_INTERNES`, la config globale et les blocs `UDV_*`).
@@ -58,3 +65,32 @@ jobs:
 
             3) Crée une branche dédiée, commit le `.jmx` + les CSV, puis ouvre une PR décrivant les transactions/étapes et liée à ${{ github.event.client_payload.jira_key }}. NE MERGE JAMAIS — revue humaine.
                (Rappel : la charge réelle est jouée par le cockpit ; la CI se limite à valider/tirer unitairement les transactions.)
+
+            LIVRABLE OBLIGATOIRE : ce job DOIT se terminer par une PR ouverte. Ne termine JAMAIS sans PR.
+            Si une information manque, fais l'hypothèse la plus raisonnable et documente-la dans une section
+            « Hypothèses » du corps de la PR — ne pose pas de question en fin de tour : personne ne lit ta sortie,
+            seule la PR est relue.
+
+      # Observabilité : la transcription de l'agent (tours, décisions) archivée avec le run.
+      - name: Upload transcription de l'agent
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-execution-${{ github.event.client_payload.jira_key }}
+          path: /home/runner/work/_temp/claude-execution-output.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      # Filet de sécurité : un run vert sans PR est un échec silencieux — on le rend visible.
+      - name: Vérifie qu'une PR a été ouverte
+        env:
+          JIRA_KEY: ${{ github.event.client_payload.jira_key }}
+        run: |
+          if gh pr list --repo "${{ github.repository }}" --state open \
+               --json title,headRefName --jq '.[] | "\(.title) \(.headRefName)"' \
+               | grep -qi "$JIRA_KEY"; then
+            echo "PR trouvée pour $JIRA_KEY"
+          else
+            echo "::error::L'agent a terminé sans ouvrir de PR pour $JIRA_KEY (échec silencieux)."
+            exit 1
+          fi
