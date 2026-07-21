@@ -76,12 +76,25 @@ jobs:
                - leurs ÉTAPES (ETxx_yy) = chaque action du parcours, traduite en appels HTTP via le
                  « Mapping métier » de CLAUDE.md (se connecter = POST /api/auth/login, rechercher = GET /api/listings?city=, …) ;
                - les FONCTIONS communes = toute action partagée par plusieurs transactions (ex. connexion) ;
-               - les JDD `load/data/<PROJET>-TRxx.csv` (colonnes login,pass par défaut) — si le ticket ne fournit
-                 pas de comptes, génère des jeux plausibles et tiens compte de la DB éphémère (inscription préalable, voir CLAUDE.md).
+               - les JDD `load/data/<PROJET>-TRxx.csv` : colonnes = ce que le parcours variabilise réellement
+                 (`login,pass` pour un parcours authentifié, `ville`/autre pour un parcours anonyme).
+                 ⛔ **UNIQUEMENT DES DONNÉES NOMINALES** : chaque ligne doit ramener un résultat exploitable.
+                 Aucune ville sans annonce, aucun compte inexistant, aucun cas négatif — cela injecterait des
+                 erreurs par construction et rendrait les KPI de charge ininterprétables (les cas d'erreur se
+                 testent en Playwright, pas ici). Tiens compte de la DB éphémère : si le parcours suppose des
+                 données applicatives, vérifie qu'elles existent ou crée-les en amont.
                Si le ticket contient déjà des transactions/étapes explicites, elles priment sur ta dérivation.
 
             2) Génère `load/<projet>.jmx` en respectant STRICTEMENT la section « Tests de charge (JMeter) — convention ATAKAMA PH » de CLAUDE.md :
                - Réutilise la structure et les briques techniques de `load/templates/PH_Template_Web_Workload.jmx` (RÉUTILISE VERBATIM `FONCTIONS_INTERNES`, la config globale et les blocs `UDV_*`).
+               - ⚠️ Le template N'EST PAS conforme partout : il contient un `UltimateThreadGroup` ACTIF, un
+                 ThreadGroup « Recording », des listeners ACTIVÉS et au moins une faute d'appariement `hashTree`.
+                 « Verbatim » vaut pour les briques techniques, JAMAIS pour l'injection : retire tout ThreadGroup
+                 d'injection, tout enregistrement et tout listener actif (`View Results Tree` → `enabled="false"`).
+               - Corrélation : `defaultValues` VIDE ou sentinelle invalide (`NO_LISTING`) — jamais une valeur
+                 plausible type `1`, qui masquerait l'échec derrière un `200` sur une ressource sans rapport.
+                 Pose une assertion sur le sampler qui alimente la corrélation (ex. `$.listings[0].id` existe) :
+                 sinon une réponse vide passe pour un succès et l'échec ne se voit qu'à l'étape suivante.
                - Génère UNIQUEMENT la logique métier : fragments `TRANSACTIONS` (TRxx_<nom> → étapes ETxx_yy_<nom>), `FONCTIONS` (briques réutilisables appelées par ModuleController), JDD, blocs UDV.
                - NE GÉNÈRE PAS l'injection ni les profils de charge (UltimateThreadGroup, paliers, VUs, ramp/hold, throughput) : c'est le cockpit / l'agent ph_jmeter qui les pose. Laisse au plus des ThreadGroups « Tests TRxx » DÉSACTIVÉS pour le tir unitaire.
                - Paramétrage via `${__P(...)}` (host, port, protocole, projet, timeout…). `@${{ env.JIRA_KEY }}` dans TestPlan.comments.
@@ -93,6 +106,18 @@ jobs:
                le nom de branche ET le titre de la PR avec « -RUN_LABEL » (ex. `load/lim-9-recherche-opus`,
                titre « … (LIM-9) [opus] ») : plusieurs runs du même ticket coexistent alors sans collision.
                Nomme aussi le `.jmx` en conséquence pour ne pas écraser un plan existant.
+
+            4) AUTO-VÉRIFICATION avant d'ouvrir la PR — relis ton `.jmx` et coche ces 7 points, puis
+               reporte-les dans le corps de la PR sous « Vérifications ». Ce sont les défauts réellement
+               observés sur les générations précédentes, chacun silencieux à l'exécution :
+               a. Appariement élément/`hashTree` : exactement UN `<hashTree>` par élément, aucun adjacent.
+               b. Chaque `${...}` correspond à une définition exacte — en particulier `vars.put("GP","TRxx")`
+                  doit matcher `NBE_TRxx`/`DUREE_TRxx` (le zéro compte : `TR1` ≠ `TR01`).
+               c. Aucun ThreadGroup d'injection ; seuls des « Tests TRxx » `enabled="false"` (1 VU / 1 boucle).
+               d. Aucun listener actif ; aucun artefact du template (Recording, UltimateThreadGroup).
+               e. JDD : chaque ligne ramène un résultat exploitable (aucun cas négatif).
+               f. Extracteurs : pas de `defaultValues` plausible ; chaque extraction est réutilisée.
+               g. Une assertion sur chaque sampler qui alimente une corrélation.
 
             LIVRABLE OBLIGATOIRE : ce job DOIT se terminer par une PR ouverte. Ne termine JAMAIS sans PR.
             Si une information manque, fais l'hypothèse la plus raisonnable et documente-la dans une section

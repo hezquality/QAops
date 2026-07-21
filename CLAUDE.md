@@ -120,6 +120,25 @@ TestPlan  <PROJET>_Web_Workload
 ### JDD (données) — 1 CSV par transaction
 `CSVDataSet` lisant `data/${CSV-TRxx}` (= `data/${PROJET}-TRxx.csv`), colonnes **`login,pass`**, `shareMode.group`, `recycle=true`, `ignoreFirstLine=true`, `quotedData=true`, `delimiter=,`. (Réfs : `load/data/demo-TR01.csv`, `demo-TR02.csv`.) Les colonnes deviennent `${login}`, `${pass}`.
 
+Pour un parcours **anonyme**, remplacer `login,pass` par les colonnes réellement variabilisées (ex. `ville`) — la convention porte sur *un CSV par transaction*, pas sur des noms de colonnes figés.
+
+> #### ⛔ Un JDD de charge ne contient QUE des données nominales
+>
+> **Aucun cas négatif, aucune valeur volontairement absente ou invalide.** Une ligne
+> qui ne ramène rien (ville sans annonce, compte inexistant, identifiant supprimé)
+> casse la corrélation de l'étape suivante et **injecte des erreurs par construction** :
+> le taux d'erreur et les temps de réponse remontés au cockpit deviennent
+> ininterprétables, et le tir unitaire de la CI part en rouge sans qu'il y ait de bug.
+>
+> Les cas d'erreur se testent en **fonctionnel (Playwright)**, jamais dans un JDD de perf.
+>
+> Chaque ligne doit être **vérifiée exploitable** : si le JDD dépend de données de
+> l'application (annonces, comptes), s'assurer qu'elles existent — ou prévoir une étape
+> de création en amont, la base LocImmo étant éphémère.
+>
+> *(Leçon du 21/07 : deux générations indépendantes du même ticket ont toutes deux ajouté
+> spontanément une ville fantôme au JDD, provoquant 50 % et 17 % d'itérations KO.)*
+
 ### Patron d'une transaction `TRxx_<nom>` (dans le fragment TRANSACTIONS)
 1. `CSVDataSet` de la transaction (`data/${CSV-TRxx}`).
 2. `_StartTr` (`GenericController`) : `InitTr` (JSR223 `vars.put("GP","TRxx")`) → `StartTrVars` (JSR223 qui calcule le pacing `ETP` pour **normaliser la durée** de la transaction à `DUREE_TRxx` sur `NBE_TRxx` étapes) → `StartTrFiles` (init fichiers d'erreurs, via `ModuleController` → FONCTIONS_INTERNES).
@@ -145,7 +164,10 @@ TestPlan  <PROJET>_Web_Workload
 ### Règles transverses
 - **`guiclass` exacts** (sinon `ClassNotFoundException` à l'ouverture GUI) : `CookieManager`→`CookiePanel` (**pas** `CookiePanelGUI`), `CacheManager`→`CacheManagerGui`, `CSVDataSet`→`TestBeanGUI`. En cas de doute, **copier le `guiclass` depuis le template**.
 - **Corrélation/variabilisation** : extraire tout identifiant dynamique (token, id) via `JSONPostProcessor`/`RegexExtractor` posé en **enfant** du sampler, et le **réutiliser** (path/corps/header/assertion) — jamais d'extracteur mort, jamais de valeur figée entre étapes.
+- **⛔ Jamais de `defaultValues` plausible sur un extracteur.** Une valeur de repli comme `1` ou `0` transforme un échec de corrélation en **faux positif** : l'étape suivante interroge une ressource sans rapport et renvoie `200`. Le KO devient invisible dans les KPI. Laisser `defaultValues` **vide**, ou poser une sentinelle explicitement invalide (`NO_LISTING`, `NOT_FOUND`) qui fera échouer l'étape de façon **visible**.
+- **Une assertion sur le sampler qui alimente une corrélation.** Un `200` avec une liste vide est un succès pour JMeter mais un échec métier : sans assertion, le problème ne se manifeste qu'à l'étape suivante, loin de sa cause. Poser une `JSONAssertion`/`ResponseAssertion` sur l'élément extrait (ex. `$.listings[0].id` existe) pour que l'échec soit imputé à la bonne étape et parte dans `ErrorLog`.
 - **Pas de listeners actifs** en charge (les `View Results Tree` du template sont réservés aux tirs unitaires, désactivés).
+- **⚠️ Le template n'est pas conforme partout — l'hygiène est à ta charge.** `PH_Template_Web_Workload.jmx` est une base de travail, pas un modèle à copier aveuglément : il contient un `UltimateThreadGroup` **actif**, un ThreadGroup « Recording », des listeners **activés**, et au moins une faute d'appariement `hashTree`. **Réutilise verbatim uniquement** `FONCTIONS_INTERNES`, la config globale et la structure des blocs `UDV_*` — et **retire** tout artefact d'injection, d'enregistrement ou de listener actif. « Verbatim » s'applique aux briques techniques, jamais à l'injection.
 - **Traçabilité** : `@LIM-xxx` dans le `TestPlan.comments` (ou le nom du plan) ; le label `atk_etape` porte l'étape.
 - **Scénario depuis Jira** : dérive de la description les transactions, les étapes de chaque parcours, les fonctions communes et les colonnes du/des CSV. **Rien sur l'injection** (charge, VUs, durée) — c'est le cockpit.
 - **Cohérence STRICTE des noms de variables** : toute variable `${X}` utilisée doit être **définie à l'identique** — dans un bloc `UDV_*`, une colonne de CSV, ou extraite en amont. ⚠️ Piège classique : définir `CSV-TR01` puis écrire `${CSV-TR1}` (zéro manquant) → JMeter **n'échoue pas**, il laisse le littéral non résolu (`data/${CSV-TR1}`) → fichier/URL cassé, **silencieux en non-GUI**. Après génération, **relis chaque `${...}` et vérifie qu'il correspond exactement à une définition** (mêmes casse, tirets, zéros).
