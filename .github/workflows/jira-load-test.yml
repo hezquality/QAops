@@ -81,8 +81,17 @@ jobs:
                  ⛔ **UNIQUEMENT DES DONNÉES NOMINALES** : chaque ligne doit ramener un résultat exploitable.
                  Aucune ville sans annonce, aucun compte inexistant, aucun cas négatif — cela injecterait des
                  erreurs par construction et rendrait les KPI de charge ininterprétables (les cas d'erreur se
-                 testent en Playwright, pas ici). Tiens compte de la DB éphémère : si le parcours suppose des
-                 données applicatives, vérifie qu'elles existent ou crée-les en amont.
+                 testent en Playwright, pas ici).
+                 ⚠️ **VÉRIFIE LES DONNÉES AVANT DE LES ÉCRIRE — ne les invente jamais.** La base LocImmo est
+                 éphémère : une liste figée de villes se périme. Interroge l'application au moment où tu
+                 génères, et ne retiens que ce qu'elle contient réellement :
+                     curl -s "$RENTAL_APP_BASE_URL/api/listings" \
+                       | python3 -c "import sys,json,collections; d=json.load(sys.stdin); \
+                         c=collections.Counter(l['city'] for l in d['listings']); print(c.most_common())"
+                 Retiens les villes **les mieux pourvues**, et cale les fourchettes de prix sur les prix réels
+                 observés pour ces villes (`minPrice`/`maxPrice` doivent encadrer des annonces existantes).
+                 Si le parcours suppose des données que l'application n'a pas, crée-les en amont plutôt que
+                 de les supposer.
                Si le ticket contient déjà des transactions/étapes explicites, elles priment sur ta dérivation.
 
             2) ⚠️ PLAN UNIQUE — le plan de charge du projet est `load/locimmo.jmx` et il est UNIQUE.

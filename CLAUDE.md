@@ -163,6 +163,20 @@ Pour un parcours **anonyme**, remplacer `login,pass` par les colonnes réellemen
 > l'application (annonces, comptes), s'assurer qu'elles existent — ou prévoir une étape
 > de création en amont, la base LocImmo étant éphémère.
 >
+> **Interroger l'application, ne jamais inventer les données.** Une liste figée se périme
+> (base éphémère). Au moment de générer, relever les villes réellement pourvues et leurs
+> prix réels :
+>
+> ```bash
+> curl -s "$RENTAL_APP_BASE_URL/api/listings" \
+>   | python3 -c "import sys,json,collections; d=json.load(sys.stdin); \
+>     c=collections.Counter(l['city'] for l in d['listings']); print(c.most_common())"
+> ```
+>
+> Retenir les villes les mieux pourvues ; caler `minPrice`/`maxPrice` sur des prix qui
+> encadrent des annonces existantes. *(Relevé du 22/07, à titre indicatif — 85 annonces :
+> Paris 39, Montpellier 7, Lyon/Marseille/Bordeaux 6, Lille/Rennes/Grenoble 4.)*
+>
 > *(Leçon du 21/07 : deux générations indépendantes du même ticket ont toutes deux ajouté
 > spontanément une ville fantôme au JDD, provoquant 50 % et 17 % d'itérations KO.)*
 
