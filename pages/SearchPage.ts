@@ -119,7 +119,9 @@ export class SearchPage extends BasePage {
     const listings: Array<{ text: string; price: number; rooms: number }> = [];
     for (const card of cards) {
       const text = await card.innerText();
-      const price = Number(text.match(/([\d\s]+)\s?€\/mois/)?.[1]?.replace(/\s/g, ''));
+      // Espaces de séparation des milliers uniquement (jamais \s : il inclut \n et ferait
+      // déborder la capture sur le texte précédent le prix, ex. un titre finissant par un chiffre).
+      const price = Number(text.match(/([\d   ]+)\s?€\/mois/)?.[1]?.replace(/[\s  ]/g, ''));
       const rooms = Number(text.match(/(\d+)\s?pièces?/)?.[1]);
       listings.push({ text, price, rooms });
     }
