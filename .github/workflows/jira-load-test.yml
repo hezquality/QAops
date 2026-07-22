@@ -85,7 +85,19 @@ jobs:
                  données applicatives, vérifie qu'elles existent ou crée-les en amont.
                Si le ticket contient déjà des transactions/étapes explicites, elles priment sur ta dérivation.
 
-            2) Génère `load/<projet>.jmx` en respectant STRICTEMENT la section « Tests de charge (JMeter) — convention ATAKAMA PH » de CLAUDE.md :
+            2) ⚠️ PLAN UNIQUE — le plan de charge du projet est `load/locimmo.jmx` et il est UNIQUE.
+               NE CRÉE JAMAIS un second `.jmx` : tu ENRICHIS celui-ci d'une transaction.
+               - Si `load/locimmo.jmx` existe : ouvre-le, relève la dernière transaction (`TRxx`),
+                 ajoute la nouvelle sous le numéro suivant dans le fragment `TRANSACTIONS`, complète
+                 les blocs `UDV_*` existants (`NBE_TRxx`, `DUREE_TRxx` + `_MIN`, `CSV-TRxx`) SANS
+                 toucher aux entrées des autres transactions, ajoute son `ThreadGroup` « Tests TRxx »
+                 désactivé, et crée son JDD `load/data/locimmo-TRxx.csv`.
+                 Le diff doit être ADDITIF : les transactions déjà présentes ressortent inchangées.
+               - Si le fichier n'existe pas : crée-le à partir du template, avec TR01.
+               - FACTORISE : si une action existe déjà dans `FONCTIONS` (connexion, recherche,
+                 consultation…), appelle-la par `ModuleController` au lieu de la réécrire. Si ta
+                 transaction introduit une action réutilisable, place-la dans `FONCTIONS`.
+               Respecte STRICTEMENT la section « Tests de charge (JMeter) — convention ATAKAMA PH » de CLAUDE.md :
                - Réutilise la structure et les briques techniques de `load/templates/PH_Template_Web_Workload.jmx` (RÉUTILISE VERBATIM `FONCTIONS_INTERNES`, la config globale et les blocs `UDV_*`).
                - ⚠️ Le template N'EST PAS conforme partout : il contient un `UltimateThreadGroup` ACTIF, un
                  ThreadGroup « Recording », des listeners ACTIVÉS et au moins une faute d'appariement `hashTree`.

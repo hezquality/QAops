@@ -59,10 +59,11 @@ Tags utiles : `@smoke`, `@regression`, `@JIRA-xxx`.
   - `POST /api/auth/login` `{email,password}` → **200** ; pose le cookie JWT httpOnly `token` (`Set-Cookie`) ; corps `{ user: { id, name, email, … } }`.
   - `GET /api/auth/me` → **200** `{ user: {…} }` (session courante ; nécessite le cookie).
   - `POST /api/auth/logout` → **200/204** (déconnexion).
-  - `GET /api/listings` → **200** `{ "listings": [ … ] }` ; filtrage recherche `?city=<ville>` (autres filtres possibles : `type`, `minPrice`, `maxPrice`).
-  - `GET /api/listings/<id>` → **200** (détail d'une annonce).
-  - `POST /api/listings` `{title,description,type("apartment"|"house"),price,city,address,rooms,surface,furnished}` → **201** (dépôt, authentifié) ; corps = l'annonce créée (avec `id`).
-  - Mapping métier : « se connecter » = `POST /api/auth/login` ; « rechercher » = `GET /api/listings?city=` ; « consulter une annonce » = `GET /api/listings/<id>` ; « déposer une annonce » = `POST /api/listings` ; « se déconnecter » = `POST /api/auth/logout`.
+  - `GET /api/listings` → **200** `{ "listings": [ … ] }` ; filtres **vérifiés le 22/07** et cumulables : `?city=<ville>`, `?minPrice=`, `?maxPrice=`, `?type=apartment|house`. Ex. `?city=Lyon&minPrice=500&maxPrice=900`.
+  - `GET /api/listings/<id>` → **200** (détail d'une annonce) · **404** si l'annonce n'existe pas ou a été supprimée.
+  - `POST /api/listings` `{title,description,type("apartment"|"house"),price,city,address,rooms,surface,furnished}` → **201** (dépôt, authentifié). ⚠️ **Le corps est enveloppé** : `{ "listing": { "id": "<uuid>", … } }` — l'extraction se fait sur **`$.listing.id`**, PAS `$.id` (piège vérifié le 22/07 ; `$.id` ne résout pas et casse la corrélation en silence). L'`id` est un **UUID**, pas un entier.
+  - `DELETE /api/listings/<id>` → **200** `{ "success": true }` (authentifié, propriétaire de l'annonce). Vérifié le 22/07 : le `GET` suivant renvoie bien **404**.
+  - Mapping métier : « créer son compte » = `POST /api/auth/register` ; « se connecter » = `POST /api/auth/login` ; « rechercher » = `GET /api/listings?city=…&minPrice=…&maxPrice=…` ; « consulter une annonce » = `GET /api/listings/<id>` ; « déposer une annonce » = `POST /api/listings` ; « retirer une annonce » = `DELETE /api/listings/<id>` ; « se déconnecter » = `POST /api/auth/logout`.
 - **Sélecteurs réels** (validés) :
   - Login : `getByRole('textbox', { name: 'Email' })`, `getByRole('textbox', { name: 'Mot de passe', exact: true })`, `getByRole('button', { name: 'Se connecter', exact: true })`. ⚠️ **`exact: true` obligatoire** sur le bouton : la page a aussi un bouton `→ Se connecter avec le compte démo` qui matcherait sinon (strict mode violation).
   - Register : `Nom complet`, `Email`, `Téléphone (optionnel)`, `Mot de passe` (**exact:true**), `Confirmer le mot de passe`, bouton `S'inscrire`.
@@ -90,6 +91,32 @@ Pour les tickets Jira de **test de charge/performance**, l'agent génère un **p
 | Config globale (Cookie/Cache/Header/HTTP Defaults) | `ConstantThroughputTimer`, profils de charge |
 
 **Inclure un `ThreadGroup` « Tests TRxx » DÉSACTIVÉ par transaction** (1 VU / 1 boucle, appelant la transaction via `ModuleController`) : la CI `load-report.yml` les **active automatiquement** pour un **tir unitaire de validation** (vérifie que les transactions s'exécutent), sans jamais jouer de charge. Ne jamais laisser de thread group d'injection actif.
+
+> ### 📌 UN SEUL PLAN PAR PROJET — on l'enrichit, on ne le duplique pas
+>
+> Le plan de charge de LocImmo est **`load/locimmo.jmx`**, et il est **unique**.
+> Chaque ticket de charge ajoute **une transaction** à ce plan existant ; il ne crée
+> **jamais** un second `.jmx`.
+>
+> **Pourquoi** : les transactions d'un même projet partagent la config globale, les
+> `FONCTIONS_INTERNES`, et surtout les **briques métier** (`connexion`, `recherche`,
+> `consulter_annonce`…). Des plans séparés dupliquent ces briques, divergent au premier
+> correctif, et interdisent au cockpit de jouer un **workload mixte** — or c'est
+> précisément son rôle : répartir la charge entre TR01, TR02, TR03 dans un seul tir.
+>
+> **Procédure d'enrichissement** (ticket → nouvelle transaction) :
+> 1. Ouvrir `load/locimmo.jmx` et **relever la dernière transaction** présente (`TRxx`).
+> 2. Ajouter la nouvelle sous le numéro suivant, dans le fragment `TRANSACTIONS`.
+> 3. Compléter les blocs existants — **sans jamais réécrire les entrées des autres
+>    transactions** : `NBE_TRxx`, `DUREE_TRxx` (+ `_MIN`), `CSV-TRxx`.
+> 4. Créer son JDD `load/data/locimmo-TRxx.csv`.
+> 5. Ajouter son `ThreadGroup` « Tests TRxx » **désactivé**.
+> 6. **Factoriser** : si une action existe déjà dans `FONCTIONS` (connexion, recherche…),
+>    l'appeler par `ModuleController` au lieu de la réécrire. Si la nouvelle transaction
+>    introduit une action qui resservira, la placer dans `FONCTIONS`.
+>
+> Le diff d'un ticket de charge doit donc être **additif** : les transactions déjà
+> présentes ressortent inchangées.
 
 ### Ossature (fragments `TestFragmentController` désactivés = bibliothèques)
 
