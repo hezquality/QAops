@@ -1,0 +1,11 @@
+titre,description,type,prix,ville,adresse,pieces,surface,meuble
+Appartement lumineux centre-ville,Bel appartement proche transports,apartment,650,Lyon,12 rue de la Republique,2,45,true
+Maison avec jardin,Maison familiale calme,house,1200,Bordeaux,5 rue des Tilleuls,4,110,false
+Appartement meuble proche gare,Studio meuble tout confort,apartment,540,Lille,8 rue Nationale,1,28,true
+Maison de ville non meublee,Maison a renover charme ancien,house,980,Nantes,3 impasse des Vignes,3,95,false
+Appartement meuble vue parc,Appartement lumineux avec balcon,apartment,720,Toulouse,22 avenue Jean Jaures,2,52,true
+Maison non meublee avec garage,Grande maison avec garage double,house,1450,Strasbourg,17 rue du Marche,5,130,false
+Appartement meuble quartier calme,Appartement refait a neuf,apartment,590,Rennes,9 rue de Bretagne,2,48,true
+Maison non meublee proche ecole,Maison familiale proche ecoles,house,1100,Grenoble,14 chemin des Alpes,4,105,false
+Appartement meuble dernier etage,Appartement avec vue degagee,apartment,680,Montpellier,6 rue Foch,2,50,true
+Maison non meublee avec terrasse,Maison avec grande terrasse,house,1350,Marseille,25 boulevard Michelet,4,120,false
